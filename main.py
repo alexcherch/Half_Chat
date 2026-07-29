@@ -73,3 +73,28 @@ def get_messages(after_id: int = Query(default=0), limit: int = Query(default=20
 
         # Берем только последние 'limit' сообщений
         return results[-limit:] if results else []
+
+
+@app.delete("/messages/{message_id}", status_code=200)
+def delete_message(message_id: int):
+    """
+    Удаление сообщения по его уникальному ID.
+    """
+    with Session(engine) as session:
+        # Ищем сообщение в базе по его ID
+        statement = select(Message).where(Message.id == message_id)
+        message = session.exec(statement).first()
+
+        # Если такого сообщения нет, возвращаем ошибку 404
+        if not message:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Сообщение с ID {message_id} не найдено"
+            )
+
+        # Удаляем сообщение и сохраняем изменения в файл
+        session.delete(message)
+        session.commit()
+
+        # Возвращаем статус успеха
+        return {"status": "success", "message": f"Сообщение {message_id} успешно удалено"}
