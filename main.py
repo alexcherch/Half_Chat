@@ -12,6 +12,7 @@ class Message(SQLModel, table=True):
     username: str
     text: str
     timestamp: str
+    room: str = Field(default="general")
 
 
 class MessageUpdate(BaseModel):
@@ -43,40 +44,44 @@ def on_startup():
 
 @app.post("/messages", response_model=Message, status_code=201)
 def send_message(message_data: Message):
-    """Отправка нового сообщения и сохранение его в БД."""
+    """Отправка нового сообщения в конкретную комнату."""
     if not message_data.username.strip() or not message_data.text.strip():
         raise HTTPException(
             status_code=400, detail="Никнейм и текст не могут быть пустыми"
         )
 
-    # Создаем объект сообщения с текущим временем
     new_msg = Message(
         username=message_data.username.strip(),
         text=message_data.text.strip(),
-        timestamp=datetime.now().strftime("%d.%m.%Y %H:%M")
+        timestamp=datetime.now().strftime("%d.%m.%Y %H:%M"),
+        # Если фронтенд не прислал комнату, запишем в "general"
+        room=message_data.room.strip().lower() if message_data.room else "general"
     )
 
-    # Сохраняем в базу данных
     with Session(engine) as session:
         session.add(new_msg)
         session.commit()
-        session.refresh(new_msg)  # Получаем сгенерированный базой id
+        session.refresh(new_msg)
         return new_msg
 
 
 @app.get("/messages", response_model=List[Message])
-def get_messages(after_id: int = Query(default=0), limit: int = Query(default=20, le=100)):
-    """
-    Получение истории сообщений.
-    - after_id: вернуть сообщения с ID строго больше этого
-    - limit: сколько максимум сообщений вернуть за один раз (по умолчанию 20, максимум 100)
-    """
+def get_messages(
+        after_id: int = Query(default=0),
+        limit: int = Query(default=20, le=100),
+        room: str = Query(default="general")  # <--- ДОБАВИЛИ ФИЛЬТР ПО КОМНАТЕ
+):
+    """Получение истории сообщений конкретной комнаты."""
     with Session(engine) as session:
-        # Формируем запрос с фильтром по ID и сортировкой по возрастанию
-        statement = select(Message).where(Message.id > after_id).order_by(Message.id.asc())
+        # Теперь выбираем сообщения, где ID > after_id И комната совпадает с запрошенной
+        statement = (
+            select(Message)
+            .where(Message.id > after_id)
+            .where(Message.room == room.lower())
+            .order_by(Message.id.asc())
+        )
         results = session.exec(statement).all()
 
-        # Берем только последние 'limit' сообщений
         return results[-limit:] if results else []
 
 
