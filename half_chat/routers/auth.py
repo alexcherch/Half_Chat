@@ -9,7 +9,7 @@ from half_chat.schemas import Token, UserCreate
 router = APIRouter()
 
 
-@router.post("/register", status_code=201)
+@router.post("/api/register", status_code=201)
 def register(user_data: UserCreate):
     if not user_data.username.strip() or not user_data.password.strip():
         raise HTTPException(
@@ -34,7 +34,7 @@ def register(user_data: UserCreate):
         return {"status": "success", "username": user.username}
 
 
-@router.post("/login", response_model=Token)
+@router.post("/api/login", response_model=Token)
 def login(user_data: UserCreate):
     with Session(engine) as session:
         user = session.exec(

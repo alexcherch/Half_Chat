@@ -12,7 +12,7 @@ from half_chat.schemas import MessageUpdate
 router = APIRouter()
 
 
-@router.post("/messages", response_model=Message, status_code=201)
+@router.post("/api/messages", response_model=Message, status_code=201)
 def send_message(
     message_data: Message,
     current_user: User = Depends(get_current_user),
@@ -36,7 +36,7 @@ def send_message(
         return new_msg
 
 
-@router.get("/messages", response_model=List[Message])
+@router.get("/api/messages", response_model=List[Message])
 def get_messages(
     after_id: int = Query(default=0),
     limit: int = Query(default=20, le=100),
@@ -53,7 +53,7 @@ def get_messages(
         return results[-limit:] if results else []
 
 
-@router.delete("/messages/{message_id}", status_code=200)
+@router.delete("/api/messages/{message_id}", status_code=200)
 def delete_message(
     message_id: int,
     current_user: User = Depends(get_current_user),
@@ -83,7 +83,7 @@ def delete_message(
         }
 
 
-@router.put("/messages/{message_id}", response_model=Message)
+@router.put("/api/messages/{message_id}", response_model=Message)
 def update_message(
     message_id: int,
     update_data: MessageUpdate,
@@ -121,7 +121,7 @@ def update_message(
         return message
 
 
-@router.get("/rooms", response_model=List[str])
+@router.get("/api/rooms", response_model=List[str])
 def get_rooms():
     with Session(engine) as session:
         statement = select(Message.room).distinct()
