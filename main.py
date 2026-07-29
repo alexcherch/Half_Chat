@@ -16,7 +16,7 @@ class Message(SQLModel, table=True):
 # Настраиваем подключение к файлу SQLite
 sqlite_file_name = "chat.db"
 sqlite_url = f"sqlite:///{sqlite_file_name}"
-connect_args = {"check_same_thread": False}  # Нужно для работы SQLite в چندпоточном FastAPI
+connect_args = {"check_same_thread": False, "timeout": 30}  # Нужно для работы SQLite в поточном FastAPI
 engine = create_engine(sqlite_url, connect_args=connect_args)
 
 app = FastAPI(title="Lite Chat API with DB")
@@ -48,7 +48,7 @@ def send_message(message_data: Message):
     new_msg = Message(
         username=message_data.username.strip(),
         text=message_data.text.strip(),
-        timestamp=datetime.now().strftime("%H:%M:%S")
+        timestamp=datetime.now().strftime("%d.%m.%Y %H:%M")
     )
 
     # Сохраняем в базу данных
@@ -60,9 +60,16 @@ def send_message(message_data: Message):
 
 
 @app.get("/messages", response_model=List[Message])
-def get_messages(after_id: int = Query(default=0)):
-    """Получение истории сообщений из БД начиная с определенного ID."""
+def get_messages(after_id: int = Query(default=0), limit: int = Query(default=20, le=100)):
+    """
+    Получение истории сообщений.
+    - after_id: вернуть сообщения с ID строго больше этого
+    - limit: сколько максимум сообщений вернуть за один раз (по умолчанию 20, максимум 100)
+    """
     with Session(engine) as session:
-        statement = select(Message).where(Message.id > after_id)
-        results = session.exec(statement)
-        return results.all()
+        # Формируем запрос с фильтром по ID и сортировкой по возрастанию
+        statement = select(Message).where(Message.id > after_id).order_by(Message.id.asc())
+        results = session.exec(statement).all()
+
+        # Берем только последние 'limit' сообщений
+        return results[-limit:] if results else []
