@@ -10,7 +10,7 @@ case "${1:-}" in
         ;;
     start)
         echo "Starting server..."
-        poetry run uvicorn main:app --reload
+        poetry run uvicorn main:app --reload --host 0.0.0.0
         ;;
     *)
         echo "Usage: $0 {install|start}"
