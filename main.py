@@ -146,3 +146,17 @@ def update_message(message_id: int, update_data: MessageUpdate):
         session.refresh(message)
 
         return message
+
+
+@app.get("/rooms", response_model=List[str])
+def get_rooms():
+    """
+    Получение списка всех существующих комнат, в которых есть хотя бы одно сообщение.
+    """
+    with Session(engine) as session:
+        # Выбираем уникальные (distinct) значения из колонки room
+        statement = select(Message.room).distinct()
+        results = session.exec(statement).all()
+
+        # Возвращаем список строк (названий комнат)
+        return results
