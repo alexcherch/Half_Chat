@@ -3,6 +3,7 @@ from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Field, Session, SQLModel, create_engine, select
+from pydantic import BaseModel
 
 
 # Описываем модель сообщения для базы данных
@@ -11,6 +12,10 @@ class Message(SQLModel, table=True):
     username: str
     text: str
     timestamp: str
+
+
+class MessageUpdate(BaseModel):
+    text: str
 
 
 # Настраиваем подключение к файлу SQLite
@@ -98,3 +103,41 @@ def delete_message(message_id: int):
 
         # Возвращаем статус успеха
         return {"status": "success", "message": f"Сообщение {message_id} успешно удалено"}
+
+
+@app.put("/messages/{message_id}", response_model=Message)
+def update_message(message_id: int, update_data: MessageUpdate):
+    """
+    Редактирование текста сообщения по его ID.
+    """
+    # Проверяем, что новый текст не пустой
+    if not update_data.text.strip():
+        raise HTTPException(
+            status_code=400, detail="Текст сообщения не может быть пустым"
+        )
+
+    with Session(engine) as session:
+        # Ищем сообщение в базе
+        statement = select(Message).where(Message.id == message_id)
+        message = session.exec(statement).first()
+
+        # Если сообщения с таким ID нет — возвращаем 404
+        if not message:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Сообщение с ID {message_id} не найдено"
+            )
+
+        # Обновляем текст сообщения
+        message.text = update_data.text.strip()
+
+        # Опционально: добавляем пометку "(изм.)" к времени
+        if " (изм.)" not in message.timestamp:
+            message.timestamp += " (изм.)"
+
+        # Сохраняем изменения в базу данных
+        session.add(message)
+        session.commit()
+        session.refresh(message)
+
+        return message
