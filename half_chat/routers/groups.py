@@ -43,9 +43,16 @@ def create_group(
 
 
 @router.get("/api/groups", response_model=List[GroupRead])
-def list_groups():
+def list_groups(current_user: User = Depends(get_current_user)):
     with Session(engine) as session:
-        groups = session.exec(select(Group).order_by(Group.id)).all()  # type: ignore[arg-type]
+        user_group_ids = session.exec(
+            select(GroupMember.group_id).where(GroupMember.username == current_user.username)
+        ).all()
+        user_group_ids = [x for x in user_group_ids if x is not None]
+
+        groups = session.exec(
+            select(Group).where(Group.id.in_(user_group_ids)).order_by(Group.id)  # type: ignore[union-attr,arg-type]
+        ).all() if user_group_ids else []
 
         result = []
         for g in groups:
@@ -96,6 +103,54 @@ def add_member(
         session.add(GroupMember(group_id=group_id, username=member_data.username.strip()))
         session.commit()
         return {"status": "success", "username": member_data.username.strip(), "group_id": group_id}
+
+
+@router.post("/api/groups/{group_id}/join", status_code=200)
+def join_group(
+    group_id: int,
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        group = session.get(Group, group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+
+        existing = session.exec(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.username == current_user.username,
+            )
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Вы уже в группе")
+
+        session.add(GroupMember(group_id=group_id, username=current_user.username))
+        session.commit()
+        return {"status": "success", "group_id": group_id, "username": current_user.username}
+
+
+@router.post("/api/groups/{group_id}/leave", status_code=200)
+def leave_group(
+    group_id: int,
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        group = session.get(Group, group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+
+        existing = session.exec(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.username == current_user.username,
+            )
+        ).first()
+        if not existing:
+            raise HTTPException(status_code=400, detail="Вы не состоите в группе")
+
+        session.delete(existing)
+        session.commit()
+        return {"status": "success", "group_id": group_id, "username": current_user.username}
 
 
 @router.get("/api/groups/{group_id}/members", response_model=List[str])

@@ -42,9 +42,10 @@ alembic/
 - POST /api/messages — `{text, group_id, reply_to_id?}` (auth)
 - GET /api/messages?group_id=&after_id=&limit= (public)
 - PUT/DELETE /api/messages/{id} (auth, только свои)
-- POST /api/groups — `{name}` (auth)
-- GET /api/groups — список с member_count (public)
+- POST /api/groups — `{name}` (auth, создатель становится участником)
+- GET /api/groups — список групп пользователя с member_count (auth)
 - POST /api/groups/{id}/members — `{username}` (auth)
+- POST /api/groups/{id}/join — вступить в группу (auth)
 - GET /api/groups/{id}/members (public)
 
 ## Models
@@ -68,3 +69,6 @@ alembic upgrade head
 - `DATABASE_URL` — из `half_chat/db_config.py` (gitignored) или `DATABASE_URL` env
 - `SECRET_KEY` — из env или дефолт
 - Чувствительные данные только в `db_config.py`, не в `config.py`
+
+## Эндпоинты (users)
+- GET /api/users?q= — поиск пользователей по username (public)

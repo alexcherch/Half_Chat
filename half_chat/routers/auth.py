@@ -3,7 +3,7 @@ from sqlmodel import Session, select
 
 from half_chat.auth import create_access_token, hash_password, verify_password
 from half_chat.database import engine
-from half_chat.models import User
+from half_chat.models import Group, GroupMember, User
 from half_chat.schemas import Token, UserCreate
 
 router = APIRouter()
@@ -28,6 +28,19 @@ def register(user_data: UserCreate):
         )
         session.add(user)
         session.commit()
+
+        general = session.exec(select(Group).where(Group.name == "general")).first()
+        if general:
+            already = session.exec(
+                select(GroupMember).where(
+                    GroupMember.group_id == general.id,
+                    GroupMember.username == user.username,
+                )
+            ).first()
+            if not already:
+                session.add(GroupMember(group_id=general.id, username=user.username))
+                session.commit()
+
         return {"status": "success", "username": user.username}
 
 

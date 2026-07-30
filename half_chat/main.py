@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 
 from half_chat.database import engine, init_db
 from half_chat.models import Group
-from half_chat.routers import auth, groups, messages
+from half_chat.routers import auth, groups, messages, users
 
 app = FastAPI(title="Half Chat")
 
@@ -21,6 +21,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(groups.router)
 app.include_router(messages.router)
+app.include_router(users.router)
 
 
 @app.on_event("startup")
