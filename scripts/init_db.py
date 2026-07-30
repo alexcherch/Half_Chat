@@ -3,18 +3,19 @@
 Скрипт инициализации БД.
 Создаёт базу данных и таблицы, если их нет.
 """
+
 import os
 import re
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-import psycopg2
-from sqlmodel import SQLModel
-from sqlalchemy import create_engine
+import psycopg2  # noqa: E402
+from sqlalchemy import create_engine  # noqa: E402
+from sqlmodel import SQLModel  # noqa: E402
 
-import half_chat.models  # noqa: F401
-from half_chat.config import DATABASE_URL
+import half_chat.models  # noqa: F401, E402
+from half_chat.config import DATABASE_URL  # noqa: E402
 
 
 def parse_url(url: str) -> dict:

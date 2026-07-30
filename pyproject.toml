@@ -1,5 +1,6 @@
 [project]
 name = "half-chat"
+readme = "README.md"
 version = "0.1.0"
 description = ""
 authors = [
@@ -24,5 +25,31 @@ build-backend = "poetry.core.masonry.api"
 
 [dependency-groups]
 dev = [
-    "uvicorn (>=0.52.0,<0.53.0)"
+    "uvicorn (>=0.52.0,<0.53.0)",
+    "black (>=26.5.1,<27.0.0)",
+    "isort (>=8.0.1,<9.0.0)",
+    "flake8 (>=7.3.0,<8.0.0)",
+    "mypy (>=2.3.0,<3.0.0)",
 ]
+
+[tool.black]
+line-length = 100
+target-version = ["py314"]
+include = '\.py$'
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+
+[tool.mypy]
+python_version = "3.14"
+strict = false
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+no_implicit_optional = true
+check_untyped_defs = true
+

@@ -16,18 +16,18 @@ security = HTTPBearer(auto_error=False)
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return pwd_context.hash(password)  # type: ignore[no-any-return]
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return pwd_context.verify(plain, hashed)  # type: ignore[no-any-return]
 
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)  # type: ignore[no-any-return]
 
 
 def get_current_user(
@@ -37,19 +37,15 @@ def get_current_user(
         raise HTTPException(status_code=401, detail="Необходима авторизация")
 
     try:
-        payload = jwt.decode(
-            credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM]
-        )
-        username: str = payload.get("sub")
-        if username is None:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if not isinstance(username, str):
             raise HTTPException(status_code=401, detail="Неверный токен")
     except JWTError:
         raise HTTPException(status_code=401, detail="Неверный токен")
 
     with Session(engine) as session:
-        user = session.exec(
-            select(User).where(User.username == username)
-        ).first()
+        user = session.exec(select(User).where(User.username == username)).first()
         if user is None:
             raise HTTPException(status_code=401, detail="Пользователь не найден")
         return user

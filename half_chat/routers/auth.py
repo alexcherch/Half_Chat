@@ -12,18 +12,14 @@ router = APIRouter()
 @router.post("/api/register", status_code=201)
 def register(user_data: UserCreate):
     if not user_data.username.strip() or not user_data.password.strip():
-        raise HTTPException(
-            status_code=400, detail="Имя и пароль не могут быть пустыми"
-        )
+        raise HTTPException(status_code=400, detail="Имя и пароль не могут быть пустыми")
 
     with Session(engine) as session:
         existing = session.exec(
             select(User).where(User.username == user_data.username.strip())
         ).first()
         if existing:
-            raise HTTPException(
-                status_code=400, detail="Пользователь уже существует"
-            )
+            raise HTTPException(status_code=400, detail="Пользователь уже существует")
 
         user = User(
             username=user_data.username.strip(),
@@ -38,13 +34,9 @@ def register(user_data: UserCreate):
 @router.post("/api/login", response_model=Token)
 def login(user_data: UserCreate):
     with Session(engine) as session:
-        user = session.exec(
-            select(User).where(User.username == user_data.username.strip())
-        ).first()
+        user = session.exec(select(User).where(User.username == user_data.username.strip())).first()
         if not user or not verify_password(user_data.password, user.password_hash):
-            raise HTTPException(
-                status_code=401, detail="Неверное имя пользователя или пароль"
-            )
+            raise HTTPException(status_code=401, detail="Неверное имя пользователя или пароль")
 
         access_token = create_access_token(data={"sub": user.username})
         return Token(access_token=access_token)

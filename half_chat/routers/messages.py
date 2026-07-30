@@ -18,9 +18,7 @@ def send_message(
     current_user: User = Depends(get_current_user),
 ):
     if not message_data.text.strip():
-        raise HTTPException(
-            status_code=400, detail="Текст сообщения не может быть пустым"
-        )
+        raise HTTPException(status_code=400, detail="Текст сообщения не может быть пустым")
 
     with Session(engine) as session:
         group = session.get(Group, message_data.group_id)
@@ -62,8 +60,8 @@ def get_messages(
         statement = (
             select(Message)
             .where(Message.group_id == group_id)
-            .where(Message.id > after_id)
-            .order_by(Message.id.asc())
+            .where(Message.id > after_id)  # type: ignore[operator]
+            .order_by(Message.id.asc())  # type: ignore[union-attr]
         )
         results = session.exec(statement).all()
         return results[-limit:] if results else []
@@ -75,9 +73,7 @@ def delete_message(
     current_user: User = Depends(get_current_user),
 ):
     with Session(engine) as session:
-        message = session.exec(
-            select(Message).where(Message.id == message_id)
-        ).first()
+        message = session.exec(select(Message).where(Message.id == message_id)).first()
 
         if not message:
             raise HTTPException(
@@ -106,14 +102,10 @@ def update_message(
     current_user: User = Depends(get_current_user),
 ):
     if not update_data.text.strip():
-        raise HTTPException(
-            status_code=400, detail="Текст сообщения не может быть пустым"
-        )
+        raise HTTPException(status_code=400, detail="Текст сообщения не может быть пустым")
 
     with Session(engine) as session:
-        message = session.exec(
-            select(Message).where(Message.id == message_id)
-        ).first()
+        message = session.exec(select(Message).where(Message.id == message_id)).first()
 
         if not message:
             raise HTTPException(

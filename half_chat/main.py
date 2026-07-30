@@ -29,9 +29,11 @@ def on_startup():
     with Session(engine) as session:
         existing = session.exec(select(Group).where(Group.name == "general")).first()
         if not existing:
-            session.add(Group(
-                name="general",
-                created_by="system",
-                created_at=datetime.now().isoformat(),
-            ))
+            session.add(
+                Group(
+                    name="general",
+                    created_by="system",
+                    created_at=datetime.now().isoformat(),
+                )
+            )
             session.commit()

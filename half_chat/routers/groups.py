@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select, func
+from sqlmodel import Session, func, select
 
 from half_chat.auth import get_current_user
 from half_chat.database import engine
@@ -34,7 +34,7 @@ def create_group(
         session.commit()
 
         return GroupRead(
-            id=group.id,
+            id=group.id,  # type: ignore[arg-type]
             name=group.name,
             created_by=group.created_by,
             created_at=group.created_at,
@@ -45,22 +45,22 @@ def create_group(
 @router.get("/api/groups", response_model=List[GroupRead])
 def list_groups():
     with Session(engine) as session:
-        groups = session.exec(
-            select(Group).order_by(Group.id)
-        ).all()
+        groups = session.exec(select(Group).order_by(Group.id)).all()  # type: ignore[arg-type]
 
         result = []
         for g in groups:
             count = session.exec(
-                select(func.count(GroupMember.id)).where(GroupMember.group_id == g.id)
+                select(func.count(GroupMember.id)).where(GroupMember.group_id == g.id)  # type: ignore[arg-type]
             ).one()
-            result.append(GroupRead(
-                id=g.id,
-                name=g.name,
-                created_by=g.created_by,
-                created_at=g.created_at,
-                member_count=count,
-            ))
+            result.append(
+                GroupRead(
+                    id=g.id,  # type: ignore[arg-type]
+                    name=g.name,
+                    created_by=g.created_by,
+                    created_at=g.created_at,
+                    member_count=count,
+                )
+            )
         return result
 
 
