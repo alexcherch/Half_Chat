@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel
 
 
@@ -13,3 +15,19 @@ class Token(BaseModel):
 
 class MessageUpdate(BaseModel):
     text: str
+
+
+class GroupCreate(BaseModel):
+    name: str
+
+
+class GroupRead(BaseModel):
+    id: int
+    name: str
+    created_by: str
+    created_at: str
+    member_count: int = 0
+
+
+class AddMember(BaseModel):
+    username: str

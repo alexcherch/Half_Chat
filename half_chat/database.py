@@ -1,8 +1,8 @@
 from sqlmodel import Session, SQLModel, create_engine
 
-from half_chat.config import CONNECT_ARGS, SQLITE_URL
+from half_chat.config import DATABASE_URL
 
-engine = create_engine(SQLITE_URL, connect_args=CONNECT_ARGS)
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 
 
 def init_db():

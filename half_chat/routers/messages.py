@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 
 from half_chat.auth import get_current_user
 from half_chat.database import engine
-from half_chat.models import Message, User
+from half_chat.models import Group, Message, User
 from half_chat.schemas import MessageUpdate
 
 router = APIRouter()
@@ -22,14 +22,17 @@ def send_message(
             status_code=400, detail="Текст сообщения не может быть пустым"
         )
 
-    new_msg = Message(
-        username=current_user.username,
-        text=message_data.text.strip(),
-        timestamp=datetime.now().strftime("%d.%m.%Y %H:%M"),
-        room=message_data.room.strip().lower() if message_data.room else "general",
-    )
-
     with Session(engine) as session:
+        group = session.get(Group, message_data.group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+
+        new_msg = Message(
+            username=current_user.username,
+            text=message_data.text.strip(),
+            timestamp=datetime.now().strftime("%d.%m.%Y %H:%M"),
+            group_id=group.id,
+        )
         session.add(new_msg)
         session.commit()
         session.refresh(new_msg)
@@ -38,15 +41,19 @@ def send_message(
 
 @router.get("/api/messages", response_model=List[Message])
 def get_messages(
+    group_id: int = Query(default=1),
     after_id: int = Query(default=0),
     limit: int = Query(default=20, le=100),
-    room: str = Query(default="general"),
 ):
     with Session(engine) as session:
+        group = session.get(Group, group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+
         statement = (
             select(Message)
+            .where(Message.group_id == group_id)
             .where(Message.id > after_id)
-            .where(Message.room == room.lower())
             .order_by(Message.id.asc())
         )
         results = session.exec(statement).all()
@@ -119,11 +126,3 @@ def update_message(
         session.commit()
         session.refresh(message)
         return message
-
-
-@router.get("/api/rooms", response_model=List[str])
-def get_rooms():
-    with Session(engine) as session:
-        statement = select(Message.room).distinct()
-        results = session.exec(statement).all()
-        return results
