@@ -24,7 +24,7 @@ def create_group(
         group = Group(
             name=group_data.name.strip(),
             created_by=current_user.username,
-            created_at=datetime.now().strftime("%d.%m.%Y %H:%M"),
+            created_at=datetime.now().isoformat(),
         )
         session.add(group)
         session.commit()

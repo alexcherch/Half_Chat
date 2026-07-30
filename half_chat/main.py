@@ -32,6 +32,6 @@ def on_startup():
             session.add(Group(
                 name="general",
                 created_by="system",
-                created_at=datetime.now().strftime("%d.%m.%Y %H:%M"),
+                created_at=datetime.now().isoformat(),
             ))
             session.commit()

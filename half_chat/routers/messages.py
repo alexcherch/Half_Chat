@@ -38,7 +38,7 @@ def send_message(
         new_msg = Message(
             username=current_user.username,
             text=message_data.text.strip(),
-            timestamp=datetime.now().strftime("%d.%m.%Y %H:%M"),
+            timestamp=datetime.now().isoformat(),
             group_id=group.id,
             reply_to_id=message_data.reply_to_id,
         )
@@ -128,8 +128,6 @@ def update_message(
             )
 
         message.text = update_data.text.strip()
-        if " (изм.)" not in message.timestamp:
-            message.timestamp += " (изм.)"
 
         session.add(message)
         session.commit()
