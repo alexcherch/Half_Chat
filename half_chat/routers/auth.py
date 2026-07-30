@@ -28,6 +28,7 @@ def register(user_data: UserCreate):
         user = User(
             username=user_data.username.strip(),
             password_hash=hash_password(user_data.password),
+            date_of_birth=user_data.date_of_birth.strip() if user_data.date_of_birth else None,
         )
         session.add(user)
         session.commit()

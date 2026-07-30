@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class UserCreate(BaseModel):
     username: str
     password: str
+    date_of_birth: Optional[str] = None
 
 
 class Token(BaseModel):

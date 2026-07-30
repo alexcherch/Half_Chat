@@ -131,6 +131,9 @@ __pypackages__/
 celerybeat-schedule
 celerybeat.pid
 
+# Local database config
+half_chat/db_config.py
+
 # SQLite
 chat.db
 
