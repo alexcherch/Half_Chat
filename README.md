@@ -51,6 +51,7 @@ erDiagram
         int id PK
         string username UK
         string password_hash
+        string date_of_birth
     }
 
     chat_group {
