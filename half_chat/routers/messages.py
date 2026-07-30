@@ -27,11 +27,20 @@ def send_message(
         if not group:
             raise HTTPException(status_code=404, detail="Группа не найдена")
 
+        if message_data.reply_to_id:
+            reply_msg = session.get(Message, message_data.reply_to_id)
+            if not reply_msg:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Сообщение {message_data.reply_to_id} не найдено",
+                )
+
         new_msg = Message(
             username=current_user.username,
             text=message_data.text.strip(),
             timestamp=datetime.now().strftime("%d.%m.%Y %H:%M"),
             group_id=group.id,
+            reply_to_id=message_data.reply_to_id,
         )
         session.add(new_msg)
         session.commit()

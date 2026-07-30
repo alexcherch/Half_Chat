@@ -31,3 +31,4 @@ class Message(SQLModel, table=True):
     text: str
     timestamp: str
     group_id: int = Field(default=1, foreign_key="chat_group.id", index=True)
+    reply_to_id: Optional[int] = Field(default=None, foreign_key="message.id")

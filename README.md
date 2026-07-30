@@ -73,7 +73,10 @@ erDiagram
         string text
         string timestamp
         int group_id FK
+        int reply_to_id FK
     }
+
+    Message ||--o{ Message : "ответ на сообщение"
 
     User ||--o{ group_member : "участвует (по username)"
     chat_group ||--o{ group_member : "содержит"
