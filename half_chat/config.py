@@ -9,5 +9,5 @@ try:
 except ImportError:
     DATABASE_URL = os.getenv(
         "DATABASE_URL",
-        "postgresql://postgres:Shurik2010@localhost:5432/half_chat",
+        "postgresql://user:password@localhost:5432/half_chat",
     )

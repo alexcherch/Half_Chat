@@ -13,7 +13,7 @@ poetry run uvicorn main:app --host 0.0.0.0 --port 8000
 
 | Переменная | По умолчанию | Описание |
 |---|---|---|
-| `DATABASE_URL` | `postgresql://postgres:Shurik2010@localhost:5432/half_chat` | Подключение к БД |
+| `DATABASE_URL` | `postgresql://user:password@localhost:5432/half_chat` | Подключение к БД |
 | `SECRET_KEY` | `super-secret-key-change-in-production` | Ключ для JWT |
 
 ## Эндпоинты
