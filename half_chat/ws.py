@@ -45,5 +45,8 @@ class ConnectionManager:
             except Exception:
                 self.disconnect_user(username, websocket)
 
+    def is_online(self, username: str) -> bool:
+        return bool(self.user_connections.get(username))
+
 
 manager = ConnectionManager()

@@ -43,7 +43,7 @@ alembic/
 - POST /api/messages — `{text, group_id, reply_to_id?}` (auth)
 - GET /api/messages?group_id=&after_id=&limit= (public)
 - PUT/DELETE /api/messages/{id} (auth, только свои)
-- WS /api/ws/{group_id}?token= — реальное время: события `new_message`, `update_message`, `delete_message`, `mention`
+- WS /api/ws/{group_id}?token= — реальное время: события `new_message`, `update_message`, `delete_message`, `mention`, `presence`
 - POST /api/groups — `{name}` (auth, создатель становится участником)
 - GET /api/groups — список групп пользователя с member_count (auth)
 - POST /api/groups/{id}/members — `{username}` (auth)
@@ -74,3 +74,4 @@ alembic upgrade head
 
 ## Эндпоинты (users)
 - GET /api/users?q= — поиск пользователей по username (public)
+- GET /api/users/{username}/status — статус онлайн/офлайн (public), по активным WS-подключениям
