@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: half_chat
+      POSTGRES_PASSWORD: half_chat
+      POSTGRES_DB: half_chat
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U half_chat"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://half_chat:half_chat@db:5432/half_chat
+      SECRET_KEY: change-me-in-production
+    ports:
+      - "8000:8000"
+    command: sh -c "alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  pgdata:

@@ -11,6 +11,15 @@ bash dev.sh db:migrate   # применить миграции
 bash dev.sh start        # uvicorn main:app --reload
 ```
 
+## Docker
+
+```bash
+bash dev.sh docker:up    # docker compose up --build (app + postgres)
+bash dev.sh docker:down  # docker compose down
+```
+
+Поднимаются два сервиса: `db` (postgres:16) и `app` (build из `Dockerfile`). При старте применяются миграции, затем запускается uvicorn на `:8000`. Конфиг — через env `DATABASE_URL` и `SECRET_KEY` (`db_config.py` в контейнер не попадает).
+
 ## Конфигурация
 
 Credentials БД — в `half_chat/db_config.py` (gitignored, скопируй с `db_config.example.py`), либо через env `DATABASE_URL`.
@@ -34,6 +43,10 @@ Credentials БД — в `half_chat/db_config.py` (gitignored, скопируй �
 | Метод | Путь | Описание | Auth |
 |---|---|---|---|
 | `GET` | `/api/users?q=` | Поиск пользователей по username | Нет |
+| `GET` | `/api/users/{username}/status` | Статус онлайн/офлайн | Нет |
+| `GET` | `/api/users/me` | Профиль текущего пользователя | Да |
+| `PUT` | `/api/users/me` | Изменить username/дату рождения | Да |
+| `PUT` | `/api/users/me/password` | Сменить пароль | Да |
 
 ### Группы
 
@@ -59,7 +72,7 @@ Credentials БД — в `half_chat/db_config.py` (gitignored, скопируй �
 
 | Метод | Путь | Описание |
 |---|---|---|
-| `WS` | `/api/ws/{group_id}?token=` | События: `new_message`, `update_message`, `delete_message`, `mention` |
+| `WS` | `/api/ws/{group_id}?token=` | События: `new_message`, `update_message`, `delete_message`, `mention`, `presence` |
 
 ## Структура БД
 

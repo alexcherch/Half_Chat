@@ -11,7 +11,16 @@ bash dev.sh install      # poetry install
 bash dev.sh start        # uvicorn main:app --reload
 bash dev.sh db:init      # создать БД и таблицы
 bash dev.sh db:migrate   # применить миграции
+bash dev.sh docker:up    # docker compose up --build (app + postgres)
+bash dev.sh docker:down  # docker compose down
 ```
+
+## Docker
+- `Dockerfile` — python:3.14-slim, poetry install --only main (без dev)
+- `docker-compose.yml` — сервисы `db` (postgres:16) и `app`
+- Конфиг из env: `DATABASE_URL`, `SECRET_KEY` (db_config.py в контейнер не попадает — в .dockerignore)
+- При старте: `alembic upgrade head` → `uvicorn main:app`
+- uvicorn — в основных зависимостях (нужен для запуска контейнера)
 
 ## Структура
 ```
