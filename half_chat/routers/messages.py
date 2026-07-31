@@ -1,19 +1,30 @@
 from datetime import datetime
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from sqlmodel import Session, select
 
 from half_chat.auth import get_current_user
 from half_chat.database import engine
 from half_chat.models import Group, Message, User
 from half_chat.schemas import MessageUpdate
+from half_chat.ws import manager
 
 router = APIRouter()
 
 
+@router.websocket("/api/ws/{group_id}")
+async def websocket_endpoint(websocket: WebSocket, group_id: int):
+    await manager.connect(group_id, websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(group_id, websocket)
+
+
 @router.post("/api/messages", response_model=Message, status_code=201)
-def send_message(
+async def send_message(
     message_data: Message,
     current_user: User = Depends(get_current_user),
 ):
@@ -43,7 +54,12 @@ def send_message(
         session.add(new_msg)
         session.commit()
         session.refresh(new_msg)
-        return new_msg
+
+    await manager.broadcast(
+        new_msg.group_id,
+        {"type": "new_message", "message": new_msg.model_dump()},
+    )
+    return new_msg
 
 
 @router.get("/api/messages", response_model=List[Message])
@@ -68,7 +84,7 @@ def get_messages(
 
 
 @router.delete("/api/messages/{message_id}", status_code=200)
-def delete_message(
+async def delete_message(
     message_id: int,
     current_user: User = Depends(get_current_user),
 ):
@@ -87,16 +103,19 @@ def delete_message(
                 detail="Нельзя удалить чужое сообщение",
             )
 
+        group_id = message.group_id
         session.delete(message)
         session.commit()
-        return {
-            "status": "success",
-            "message": f"Сообщение {message_id} успешно удалено",
-        }
+
+    await manager.broadcast(group_id, {"type": "delete_message", "message_id": message_id})
+    return {
+        "status": "success",
+        "message": f"Сообщение {message_id} успешно удалено",
+    }
 
 
 @router.put("/api/messages/{message_id}", response_model=Message)
-def update_message(
+async def update_message(
     message_id: int,
     update_data: MessageUpdate,
     current_user: User = Depends(get_current_user),
@@ -124,4 +143,9 @@ def update_message(
         session.add(message)
         session.commit()
         session.refresh(message)
-        return message
+
+    await manager.broadcast(
+        message.group_id,
+        {"type": "update_message", "message": message.model_dump()},
+    )
+    return message

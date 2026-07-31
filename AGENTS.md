@@ -24,6 +24,7 @@ half_chat/
   models.py              # SQLModel: User, Group, GroupMember, Message
   schemas.py             # Pydantic: UserCreate, Token, MessageUpdate, Group*, AddMember
   auth.py                # hash/verify password, JWT, get_current_user
+  ws.py                  # ConnectionManager (WebSockets по группам)
   routers/
     auth.py              # POST /api/register, /api/login
     groups.py            # CRUD /api/groups, /api/groups/{id}/members
@@ -42,6 +43,7 @@ alembic/
 - POST /api/messages — `{text, group_id, reply_to_id?}` (auth)
 - GET /api/messages?group_id=&after_id=&limit= (public)
 - PUT/DELETE /api/messages/{id} (auth, только свои)
+- WS /api/ws/{group_id} — реальное время: события `new_message`, `update_message`, `delete_message`
 - POST /api/groups — `{name}` (auth, создатель становится участником)
 - GET /api/groups — список групп пользователя с member_count (auth)
 - POST /api/groups/{id}/members — `{username}` (auth)
