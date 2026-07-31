@@ -1,10 +1,13 @@
+import re
 from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
+from jose import JWTError, jwt
 from sqlmodel import Session, select
 
 from half_chat.auth import get_current_user
+from half_chat.config import ALGORITHM, SECRET_KEY
 from half_chat.database import engine
 from half_chat.models import Group, Message, User
 from half_chat.schemas import MessageUpdate
@@ -12,15 +15,34 @@ from half_chat.ws import manager
 
 router = APIRouter()
 
+MENTION_RE = re.compile(r"@(\w+)")
+
+
+def get_ws_username(websocket: WebSocket) -> str | None:
+    token = websocket.query_params.get("token")
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        return username if isinstance(username, str) else None
+    except JWTError:
+        return None
+
 
 @router.websocket("/api/ws/{group_id}")
 async def websocket_endpoint(websocket: WebSocket, group_id: int):
     await manager.connect(group_id, websocket)
+    username = get_ws_username(websocket)
+    if username:
+        await manager.connect_user(username, websocket)
     try:
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(group_id, websocket)
+        if username:
+            manager.disconnect_user(username, websocket)
 
 
 @router.post("/api/messages", response_model=Message, status_code=201)
@@ -55,10 +77,27 @@ async def send_message(
         session.commit()
         session.refresh(new_msg)
 
-    await manager.broadcast(
-        new_msg.group_id,
-        {"type": "new_message", "message": new_msg.model_dump()},
-    )
+        mentioned = set(MENTION_RE.findall(new_msg.text))
+        known_mentions: List[str] = []
+        if mentioned:
+            known_mentions = list(
+                session.exec(
+                    select(User.username).where(User.username.in_(mentioned))  # type: ignore[attr-defined]
+                ).all()
+            )
+
+    payload = new_msg.model_dump()
+    await manager.broadcast(new_msg.group_id, {"type": "new_message", "message": payload})
+
+    for mention in known_mentions:
+        await manager.send_to_user(
+            mention,
+            {
+                "type": "mention",
+                "message": payload,
+                "from": current_user.username,
+            },
+        )
     return new_msg
 
 
