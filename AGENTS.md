@@ -75,3 +75,6 @@ alembic upgrade head
 ## Эндпоинты (users)
 - GET /api/users?q= — поиск пользователей по username (public)
 - GET /api/users/{username}/status — статус онлайн/офлайн (public), по активным WS-подключениям
+- GET /api/users/me — профиль текущего пользователя (auth)
+- PUT /api/users/me — изменить username/date_of_birth (auth, обновляет Message/GroupMember)
+- PUT /api/users/me/password — сменить пароль (auth, `{current_password, new_password}`)

@@ -32,3 +32,13 @@ class GroupRead(BaseModel):
 
 class AddMember(BaseModel):
     username: str
+
+
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    date_of_birth: Optional[str] = None
+
+
+class PasswordUpdate(BaseModel):
+    current_password: str
+    new_password: str
