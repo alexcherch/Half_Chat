@@ -58,12 +58,16 @@ alembic/
 - POST /api/groups/{id}/members — `{username}` (auth)
 - POST /api/groups/{id}/join — вступить в группу (auth)
 - GET /api/groups/{id}/members (public)
+- POST /api/directs — `{username}`, создать/вернуть личный чат 1-на-1 (auth, idempotent)
+- GET /api/directs — список личных чатов с peer (auth)
+- Личные чаты: Group.is_direct=True, ровно 2 участника; в них запрещены add-member/join/leave
 
 ## Models
 - Message.reply_to_id — FK на Message.id, опционально
 - Message.group_id — FK на chat_group.id, index
 - User.date_of_birth — опционально, строка
 - Group.__tablename__ = "chat_group"
+- Group.is_direct — bool (по умолчанию False), личные чаты
 - GroupMember.__tablename__ = "group_member"
 
 ## Timestamps

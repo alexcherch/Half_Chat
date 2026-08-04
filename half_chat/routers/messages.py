@@ -36,7 +36,9 @@ async def websocket_endpoint(websocket: WebSocket, group_id: int):
     username = get_ws_username(websocket)
     if username:
         await manager.connect_user(username, websocket)
-        await manager.broadcast(group_id, {"type": "presence", "username": username, "online": True})
+        await manager.broadcast(
+            group_id, {"type": "presence", "username": username, "online": True}
+        )
     try:
         while True:
             await websocket.receive_text()

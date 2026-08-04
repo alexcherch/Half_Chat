@@ -58,6 +58,8 @@ Credentials БД — в `half_chat/db_config.py` (gitignored, скопируй �
 | `POST` | `/api/groups/{id}/join` | Вступить в группу | Да |
 | `POST` | `/api/groups/{id}/leave` | Выйти из группы | Да |
 | `GET` | `/api/groups/{id}/members` | Список участников группы | Нет |
+| `POST` | `/api/directs` | Создать/вернуть личный чат 1-на-1 `{username}` (idempotent) | Да |
+| `GET` | `/api/directs` | Список личных чатов с peer | Да |
 
 ### Сообщения
 
@@ -90,6 +92,7 @@ erDiagram
         string name
         string created_by
         string created_at
+        boolean is_direct
     }
 
     group_member {

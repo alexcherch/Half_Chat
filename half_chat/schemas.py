@@ -28,6 +28,17 @@ class GroupRead(BaseModel):
     created_by: str
     created_at: str
     member_count: int = 0
+    is_direct: bool = False
+
+
+class DirectCreate(BaseModel):
+    username: str
+
+
+class DirectRead(BaseModel):
+    id: int
+    peer: str
+    created_at: str
 
 
 class AddMember(BaseModel):

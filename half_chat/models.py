@@ -16,6 +16,7 @@ class Group(SQLModel, table=True):
     name: str = Field(index=True)
     created_by: str
     created_at: str
+    is_direct: bool = Field(default=False)
 
 
 class GroupMember(SQLModel, table=True):
