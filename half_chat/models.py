@@ -25,6 +25,7 @@ class GroupMember(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     group_id: int = Field(foreign_key="chat_group.id", index=True)
     username: str
+    role: str = Field(default="member")
 
 
 class Message(SQLModel, table=True):

@@ -52,12 +52,13 @@ Credentials БД — в `half_chat/db_config.py` (gitignored, скопируй �
 
 | Метод | Путь | Описание | Auth |
 |---|---|---|---|
-| `POST` | `/api/groups` | Создать группу `{name}` (создатель становится участником) | Да |
+| `POST` | `/api/groups` | Создать группу `{name}` (создатель становится admin) | Да |
 | `GET` | `/api/groups` | Список групп пользователя с `member_count` | Да |
 | `POST` | `/api/groups/{id}/members` | Добавить участника `{username}` | Да |
 | `POST` | `/api/groups/{id}/join` | Вступить в группу | Да |
 | `POST` | `/api/groups/{id}/leave` | Выйти из группы | Да |
-| `GET` | `/api/groups/{id}/members` | Список участников группы | Нет |
+| `GET` | `/api/groups/{id}/members` | Список участников с ролями | Нет |
+| `PUT` | `/api/groups/{id}/members/{username}/role` | Сменить роль `{role}` (admin/moderator/member) | Да (админ) |
 | `POST` | `/api/directs` | Создать/вернуть личный чат 1-на-1 `{username}` (idempotent) | Да |
 | `GET` | `/api/directs` | Список личных чатов с peer | Да |
 
@@ -103,6 +104,7 @@ erDiagram
         int id PK
         int group_id FK
         string username
+        string role
     }
 
     Message {

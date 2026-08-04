@@ -7,7 +7,15 @@ from sqlmodel import Session, func, select
 from half_chat.auth import get_current_user
 from half_chat.database import engine
 from half_chat.models import Group, GroupMember, User
-from half_chat.schemas import AddMember, DirectCreate, DirectRead, GroupCreate, GroupRead
+from half_chat.schemas import (
+    AddMember,
+    DirectCreate,
+    DirectRead,
+    GroupCreate,
+    GroupRead,
+    MemberRead,
+    RoleUpdate,
+)
 
 router = APIRouter()
 
@@ -44,7 +52,7 @@ def create_group(
         session.commit()
         session.refresh(group)
 
-        session.add(GroupMember(group_id=group.id, username=current_user.username))
+        session.add(GroupMember(group_id=group.id, username=current_user.username, role="admin"))
         session.commit()
 
         return GroupRead(
@@ -247,14 +255,79 @@ def leave_group(
         return {"status": "success", "group_id": group_id, "username": current_user.username}
 
 
-@router.get("/api/groups/{group_id}/members", response_model=List[str])
+@router.get("/api/groups/{group_id}/members", response_model=List[MemberRead])
 def get_members(group_id: int):
     with Session(engine) as session:
         group = session.get(Group, group_id)
         if not group:
             raise HTTPException(status_code=404, detail="Группа не найдена")
 
-        members = session.exec(
-            select(GroupMember.username).where(GroupMember.group_id == group_id)
-        ).all()
-        return members
+        members = session.exec(select(GroupMember).where(GroupMember.group_id == group_id)).all()
+        return [
+            MemberRead(
+                username=m.username,
+                role=m.role,
+            )
+            for m in members
+        ]
+
+
+@router.put("/api/groups/{group_id}/members/{username}/role", status_code=200)
+def set_member_role(
+    group_id: int,
+    username: str,
+    role_data: RoleUpdate,
+    current_user: User = Depends(get_current_user),
+):
+    role = role_data.role.strip().lower()
+    if role not in {"admin", "moderator", "member"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Роль должна быть admin, moderator или member",
+        )
+
+    with Session(engine) as session:
+        group = session.get(Group, group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+        if group.is_direct:
+            raise HTTPException(status_code=400, detail="В личных чатах нет ролей")
+
+        actor = session.exec(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.username == current_user.username,
+            )
+        ).first()
+        if not actor or actor.role != "admin":
+            raise HTTPException(status_code=403, detail="Только админ может менять роли")
+
+        if username == current_user.username:
+            raise HTTPException(status_code=400, detail="Нельзя изменить собственную роль")
+
+        membership = session.exec(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.username == username,
+            )
+        ).first()
+        if not membership:
+            raise HTTPException(status_code=404, detail="Участник не найден в группе")
+
+        if membership.role == "admin" and role != "admin":
+            admin_count = session.exec(
+                select(func.count(GroupMember.id)).where(  # type: ignore[arg-type]
+                    GroupMember.group_id == group_id,
+                    GroupMember.role == "admin",
+                )
+            ).one()
+            if admin_count <= 1:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Нельзя снять роль админа с последнего админа",
+                )
+
+        membership.role = role
+        session.add(membership)
+        session.commit()
+        return {"status": "success", "group_id": group_id, "username": username, "role": role}

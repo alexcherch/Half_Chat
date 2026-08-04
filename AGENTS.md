@@ -60,7 +60,8 @@ alembic/
 - GET /api/groups — список групп пользователя с member_count (auth)
 - POST /api/groups/{id}/members — `{username}` (auth)
 - POST /api/groups/{id}/join — вступить в группу (auth)
-- GET /api/groups/{id}/members (public)
+- GET /api/groups/{id}/members — список участников с ролями (public)
+- PUT /api/groups/{id}/members/{username}/role — `{role}` admin/moderator/member (auth, только админ)
 - POST /api/directs — `{username}`, создать/вернуть личный чат 1-на-1 (auth, idempotent)
 - GET /api/directs — список личных чатов с peer (auth)
 - Личные чаты: Group.is_direct=True, ровно 2 участника; в них запрещены add-member/join/leave
@@ -74,6 +75,7 @@ alembic/
 - Group.is_direct — bool (по умолчанию False), личные чаты
 - Group.pinned_message_id — закреплённое сообщение группы (один пин)
 - GroupMember.__tablename__ = "group_member"
+- GroupMember.role — admin/moderator/member (по умолчанию member; создатель группы становится admin)
 
 ## Timestamps
 - Все в ISO-формате (`datetime.now().isoformat()`)

@@ -50,6 +50,15 @@ class AddMember(BaseModel):
     username: str
 
 
+class MemberRead(BaseModel):
+    username: str
+    role: str
+
+
+class RoleUpdate(BaseModel):
+    role: str
+
+
 class UserUpdate(BaseModel):
     username: Optional[str] = None
     date_of_birth: Optional[str] = None
