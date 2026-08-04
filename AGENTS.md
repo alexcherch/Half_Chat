@@ -50,7 +50,7 @@ alembic/
 - POST /api/register — `{username, password, date_of_birth?}`
 - POST /api/login — `{username, password}` → `{access_token, token_type}`
 - POST /api/messages — `{text, group_id, reply_to_id?}` (auth)
-- GET /api/messages?group_id=&after_id=&limit= (public, опц. auth) — soft-delete: в группах удале. видны только админу, в личных чатах — только автору
+- GET /api/messages?group_id=&after_id=&limit= (auth) — soft-delete: в группах удале. видны только админу, в личных чатах — только автору
 - PUT /api/messages/{id} (auth, только свои)
 - DELETE /api/messages/{id} (auth, только свои) — soft-delete (столбец deleted, строку не стирает)
 - POST /api/messages/{id}/forward — `{group_id}` (auth), копия в др. группу с forwarded_from_id/forwarded_group_id
@@ -61,7 +61,7 @@ alembic/
 - GET /api/groups — список групп пользователя с member_count (auth)
 - POST /api/groups/{id}/members — `{username}` (auth)
 - POST /api/groups/{id}/join — вступить в группу (auth)
-- GET /api/groups/{id}/members — список участников с ролями (public)
+- GET /api/groups/{id}/members — список участников с ролями (auth)
 - PUT /api/groups/{id}/members/{username}/role — `{role}` admin/moderator/member (auth, только админ)
 - DELETE /api/groups/{id}/members/{username} — удалить участника (auth, только админ)
 - POST /api/groups/{id}/members/{username}/ban — забанить (auth, только админ, запрещает вступление/добавление)

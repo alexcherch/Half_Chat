@@ -1,12 +1,12 @@
 import re
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from jose import JWTError, jwt
 from sqlmodel import Session, select
 
-from half_chat.auth import get_current_user, get_optional_user
+from half_chat.auth import get_current_user
 from half_chat.config import ALGORITHM, SECRET_KEY
 from half_chat.database import engine
 from half_chat.models import Group, GroupMember, Message, User
@@ -140,17 +140,14 @@ def get_messages(
     group_id: int = Query(default=1),
     after_id: int = Query(default=0),
     limit: int = Query(default=20, le=100),
-    current_user: Optional[User] = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
 ):
     with Session(engine) as session:
         group = session.get(Group, group_id)
         if not group:
             raise HTTPException(status_code=404, detail="Группа не найдена")
 
-        current_username = current_user.username if current_user else None
-        is_admin = False
-        if current_user:
-            is_admin = is_group_admin(session, group_id, current_user.username)
+        is_admin = is_group_admin(session, group_id, current_user.username)
 
         statement = (
             select(Message)
@@ -165,7 +162,7 @@ def get_messages(
             if not msg.deleted:
                 visible.append(msg)
             elif group.is_direct:
-                if current_username and msg.username == current_username:
+                if msg.username == current_user.username:
                     visible.append(msg)
             elif is_admin:
                 visible.append(msg)

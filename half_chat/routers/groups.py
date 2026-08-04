@@ -274,7 +274,10 @@ def leave_group(
 
 
 @router.get("/api/groups/{group_id}/members", response_model=List[MemberRead])
-def get_members(group_id: int):
+def get_members(
+    group_id: int,
+    current_user: User = Depends(get_current_user),
+):
     with Session(engine) as session:
         group = session.get(Group, group_id)
         if not group:

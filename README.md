@@ -57,7 +57,7 @@ Credentials БД — в `half_chat/db_config.py` (gitignored, скопируй �
 | `POST` | `/api/groups/{id}/members` | Добавить участника `{username}` | Да |
 | `POST` | `/api/groups/{id}/join` | Вступить в группу | Да |
 | `POST` | `/api/groups/{id}/leave` | Выйти из группы | Да |
-| `GET` | `/api/groups/{id}/members` | Список участников с ролями | Нет |
+| `GET` | `/api/groups/{id}/members` | Список участников с ролями | Да |
 | `PUT` | `/api/groups/{id}/members/{username}/role` | Сменить роль `{role}` (admin/moderator/member) | Да (админ) |
 | `DELETE` | `/api/groups/{id}/members/{username}` | Удалить участника | Да (админ) |
 | `POST` | `/api/groups/{id}/members/{username}/ban` | Забанить участника | Да (админ) |
@@ -73,9 +73,9 @@ Credentials БД — в `half_chat/db_config.py` (gitignored, скопируй �
 | Метод | Путь | Описание | Auth |
 |---|---|---|---|
 | `POST` | `/api/messages` | Отправить `{text, group_id, reply_to_id?}`; `@username` в тексте создаёт уведомление | Да |
-| `GET` | `/api/messages?group_id=&after_id=&limit=` | История сообщений | Нет |
+| `GET` | `/api/messages?group_id=&after_id=&limit=` | История сообщений (удал. видят: админ в группах, автор в личках) | Да |
 | `PUT` | `/api/messages/{id}` | Редактировать текст | Да (свои) |
-| `DELETE` | `/api/messages/{id}` | Удалить сообщение | Да (свои) |
+| `DELETE` | `/api/messages/{id}` | Удалить сообщение (soft-delete) | Да (свои) |
 | `POST` | `/api/messages/{id}/forward` | Переслать `{group_id}` в другую группу | Да |
 | `POST` | `/api/messages/{id}/pin` | Закрепить сообщение в группе | Да |
 | `POST` | `/api/messages/{id}/unpin` | Открепить сообщение | Да |
