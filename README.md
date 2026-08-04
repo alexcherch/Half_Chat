@@ -63,6 +63,8 @@ Credentials БД — в `half_chat/db_config.py` (gitignored, скопируй �
 | `POST` | `/api/groups/{id}/members/{username}/ban` | Забанить участника | Да (админ) |
 | `POST` | `/api/groups/{id}/members/{username}/unban` | Разбанить участника | Да (админ) |
 | `GET` | `/api/groups/{id}/banned` | Список забаненных | Да (админ) |
+| `POST` | `/api/groups/{id}/members/{username}/mute` | Запретить писать сообщения | Да (админ) |
+| `POST` | `/api/groups/{id}/members/{username}/unmute` | Снять запрет на сообщения | Да (админ) |
 | `POST` | `/api/directs` | Создать/вернуть личный чат 1-на-1 `{username}` (idempotent) | Да |
 | `GET` | `/api/directs` | Список личных чатов с peer | Да |
 
@@ -109,6 +111,7 @@ erDiagram
         int group_id FK
         string username
         string role
+        boolean muted
     }
 
     group_ban {

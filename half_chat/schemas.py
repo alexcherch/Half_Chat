@@ -53,6 +53,7 @@ class AddMember(BaseModel):
 class MemberRead(BaseModel):
     username: str
     role: str
+    muted: bool = False
 
 
 class RoleUpdate(BaseModel):

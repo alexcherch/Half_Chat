@@ -26,6 +26,7 @@ class GroupMember(SQLModel, table=True):
     group_id: int = Field(foreign_key="chat_group.id", index=True)
     username: str
     role: str = Field(default="member")
+    muted: bool = Field(default=False)
 
 
 class GroupBan(SQLModel, table=True):

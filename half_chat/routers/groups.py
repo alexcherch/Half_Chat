@@ -285,6 +285,7 @@ def get_members(group_id: int):
             MemberRead(
                 username=m.username,
                 role=m.role,
+                muted=m.muted,
             )
             for m in members
         ]
@@ -472,3 +473,66 @@ def get_banned_users(group_id: int, current_user: User = Depends(get_current_use
 
         banned = session.exec(select(GroupBan.username).where(GroupBan.group_id == group_id)).all()
         return banned
+
+
+def _set_muted(session: Session, group_id: int, username: str, muted: bool) -> GroupMember:
+    membership = session.exec(
+        select(GroupMember).where(
+            GroupMember.group_id == group_id,
+            GroupMember.username == username,
+        )
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=404, detail="Участник не найден в группе")
+    if membership.role == "admin":
+        raise HTTPException(status_code=400, detail="Нельзя ограничить админа")
+    membership.muted = muted
+    session.add(membership)
+    return membership
+
+
+@router.post("/api/groups/{group_id}/members/{username}/mute", status_code=200)
+def mute_member(
+    group_id: int,
+    username: str,
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        group = session.get(Group, group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+        get_admin_or_403(session, group_id, current_user.username)
+
+        if username == current_user.username:
+            raise HTTPException(status_code=400, detail="Нельзя ограничить самого себя")
+
+        membership = _set_muted(session, group_id, username, True)
+        session.commit()
+        return {
+            "status": "success",
+            "group_id": group_id,
+            "username": username,
+            "muted": membership.muted,
+        }
+
+
+@router.post("/api/groups/{group_id}/members/{username}/unmute", status_code=200)
+def unmute_member(
+    group_id: int,
+    username: str,
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        group = session.get(Group, group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+        get_admin_or_403(session, group_id, current_user.username)
+
+        membership = _set_muted(session, group_id, username, False)
+        session.commit()
+        return {
+            "status": "success",
+            "group_id": group_id,
+            "username": username,
+            "muted": membership.muted,
+        }

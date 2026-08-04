@@ -9,7 +9,7 @@ from sqlmodel import Session, select
 from half_chat.auth import get_current_user
 from half_chat.config import ALGORITHM, SECRET_KEY
 from half_chat.database import engine
-from half_chat.models import Group, Message, User
+from half_chat.models import Group, GroupMember, Message, User
 from half_chat.schemas import ForwardCreate, MessageUpdate
 from half_chat.ws import manager
 
@@ -28,6 +28,20 @@ def get_ws_username(websocket: WebSocket) -> str | None:
         return username if isinstance(username, str) else None
     except JWTError:
         return None
+
+
+def _check_can_post(session: Session, group_id: int, username: str) -> None:
+    membership = session.exec(
+        select(GroupMember).where(
+            GroupMember.group_id == group_id,
+            GroupMember.username == username,
+        )
+    ).first()
+    if membership and membership.muted:
+        raise HTTPException(
+            status_code=403,
+            detail="Вы не можете писать сообщения в этой группе",
+        )
 
 
 @router.websocket("/api/ws/{group_id}")
@@ -65,6 +79,8 @@ async def send_message(
         group = session.get(Group, message_data.group_id)
         if not group:
             raise HTTPException(status_code=404, detail="Группа не найдена")
+
+        _check_can_post(session, group.id, current_user.username)  # type: ignore[arg-type]
 
         if message_data.reply_to_id:
             reply_msg = session.get(Message, message_data.reply_to_id)
@@ -144,6 +160,8 @@ async def forward_message(
         target_group = session.get(Group, forward_data.group_id)
         if not target_group:
             raise HTTPException(status_code=404, detail="Группа не найдена")
+
+        _check_can_post(session, target_group.id, current_user.username)  # type: ignore[arg-type]
 
         new_msg = Message(
             username=current_user.username,
