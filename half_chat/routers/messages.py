@@ -10,7 +10,7 @@ from half_chat.auth import get_current_user
 from half_chat.config import ALGORITHM, SECRET_KEY
 from half_chat.database import engine
 from half_chat.models import Group, Message, User
-from half_chat.schemas import MessageUpdate
+from half_chat.schemas import ForwardCreate, MessageUpdate
 from half_chat.ws import manager
 
 router = APIRouter()
@@ -130,6 +130,94 @@ def get_messages(
         return results[-limit:] if results else []
 
 
+@router.post("/api/messages/{message_id}/forward", response_model=Message, status_code=201)
+async def forward_message(
+    message_id: int,
+    forward_data: ForwardCreate,
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        original = session.exec(select(Message).where(Message.id == message_id)).first()
+        if not original:
+            raise HTTPException(status_code=404, detail=f"Сообщение с ID {message_id} не найдено")
+
+        target_group = session.get(Group, forward_data.group_id)
+        if not target_group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+
+        new_msg = Message(
+            username=current_user.username,
+            text=original.text,
+            timestamp=datetime.now().isoformat(),
+            group_id=target_group.id,
+            forwarded_from_id=original.id,
+            forwarded_group_id=original.group_id,
+        )
+        session.add(new_msg)
+        session.commit()
+        session.refresh(new_msg)
+
+    payload = new_msg.model_dump()
+    await manager.broadcast(new_msg.group_id, {"type": "new_message", "message": payload})
+    return new_msg
+
+
+@router.post("/api/messages/{message_id}/pin", status_code=200)
+async def pin_message(
+    message_id: int,
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        message = session.exec(select(Message).where(Message.id == message_id)).first()
+        if not message:
+            raise HTTPException(status_code=404, detail=f"Сообщение с ID {message_id} не найдено")
+
+        group = session.get(Group, message.group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+
+        group.pinned_message_id = message.id
+        group_id = message.group_id
+        message_dict = message.model_dump()
+        session.add(group)
+        session.commit()
+
+    await manager.broadcast(
+        group_id,
+        {"type": "pin_message", "message_id": message_id, "message": message_dict},
+    )
+    return {"status": "success", "group_id": group_id, "message_id": message_id}
+
+
+@router.post("/api/messages/{message_id}/unpin", status_code=200)
+async def unpin_message(
+    message_id: int,
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        message = session.exec(select(Message).where(Message.id == message_id)).first()
+        if not message:
+            raise HTTPException(status_code=404, detail=f"Сообщение с ID {message_id} не найдено")
+
+        group = session.get(Group, message.group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+
+        if group.pinned_message_id != message.id:
+            raise HTTPException(status_code=400, detail="Сообщение не закреплено в этой группе")
+
+        group.pinned_message_id = None
+        group_id = message.group_id
+        session.add(group)
+        session.commit()
+
+    await manager.broadcast(
+        group_id,
+        {"type": "unpin_message", "message_id": message_id},
+    )
+    return {"status": "success", "group_id": group_id, "message_id": message_id}
+
+
 @router.delete("/api/messages/{message_id}", status_code=200)
 async def delete_message(
     message_id: int,
@@ -151,6 +239,11 @@ async def delete_message(
             )
 
         group_id = message.group_id
+        group = session.get(Group, group_id)
+        if group and group.pinned_message_id == message.id:
+            group.pinned_message_id = None
+            session.add(group)
+
         session.delete(message)
         session.commit()
 

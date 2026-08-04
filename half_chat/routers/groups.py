@@ -153,6 +153,7 @@ def list_groups(current_user: User = Depends(get_current_user)):
                     created_by=g.created_by,
                     created_at=g.created_at,
                     member_count=count,
+                    pinned_message_id=g.pinned_message_id,
                 )
             )
         return result

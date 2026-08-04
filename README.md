@@ -69,12 +69,15 @@ Credentials БД — в `half_chat/db_config.py` (gitignored, скопируй �
 | `GET` | `/api/messages?group_id=&after_id=&limit=` | История сообщений | Нет |
 | `PUT` | `/api/messages/{id}` | Редактировать текст | Да (свои) |
 | `DELETE` | `/api/messages/{id}` | Удалить сообщение | Да (свои) |
+| `POST` | `/api/messages/{id}/forward` | Переслать `{group_id}` в другую группу | Да |
+| `POST` | `/api/messages/{id}/pin` | Закрепить сообщение в группе | Да |
+| `POST` | `/api/messages/{id}/unpin` | Открепить сообщение | Да |
 
 ### WebSockets
 
 | Метод | Путь | Описание |
 |---|---|---|
-| `WS` | `/api/ws/{group_id}?token=` | События: `new_message`, `update_message`, `delete_message`, `mention`, `presence` |
+| `WS` | `/api/ws/{group_id}?token=` | События: `new_message`, `update_message`, `delete_message`, `mention`, `presence`, `pin_message`, `unpin_message` |
 
 ## Структура БД
 
@@ -93,6 +96,7 @@ erDiagram
         string created_by
         string created_at
         boolean is_direct
+        int pinned_message_id FK
     }
 
     group_member {
@@ -108,12 +112,16 @@ erDiagram
         string timestamp
         int group_id FK
         int reply_to_id FK
+        int forwarded_from_id FK
+        int forwarded_group_id
     }
 
     Message ||--o{ Message : "ответ на сообщение"
+    Message ||--o{ Message : "пересылка"
     User ||--o{ group_member : "участвует (по username)"
     chat_group ||--o{ group_member : "содержит"
     chat_group ||--o{ Message : "содержит сообщения"
+    chat_group o|--o| Message : "закреплённое"
 ```
 
 ## Миграции

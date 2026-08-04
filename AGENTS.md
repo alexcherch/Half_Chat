@@ -52,7 +52,10 @@ alembic/
 - POST /api/messages — `{text, group_id, reply_to_id?}` (auth)
 - GET /api/messages?group_id=&after_id=&limit= (public)
 - PUT/DELETE /api/messages/{id} (auth, только свои)
-- WS /api/ws/{group_id}?token= — реальное время: события `new_message`, `update_message`, `delete_message`, `mention`, `presence`
+- POST /api/messages/{id}/forward — `{group_id}` (auth), копия в др. группу с forwarded_from_id/forwarded_group_id
+- POST /api/messages/{id}/pin — закрепить (auth, один пин на группу в chat_group.pinned_message_id)
+- POST /api/messages/{id}/unpin — открепить (auth)
+- WS /api/ws/{group_id}?token= — реальное время: события `new_message`, `update_message`, `delete_message`, `mention`, `presence`, `pin_message`, `unpin_message`
 - POST /api/groups — `{name}` (auth, создатель становится участником)
 - GET /api/groups — список групп пользователя с member_count (auth)
 - POST /api/groups/{id}/members — `{username}` (auth)
@@ -64,10 +67,12 @@ alembic/
 
 ## Models
 - Message.reply_to_id — FK на Message.id, опционально
+- Message.forwarded_from_id — FK на Message.id (ON DELETE SET NULL), forwarded_group_id — исходная группа
 - Message.group_id — FK на chat_group.id, index
 - User.date_of_birth — опционально, строка
 - Group.__tablename__ = "chat_group"
 - Group.is_direct — bool (по умолчанию False), личные чаты
+- Group.pinned_message_id — закреплённое сообщение группы (один пин)
 - GroupMember.__tablename__ = "group_member"
 
 ## Timestamps

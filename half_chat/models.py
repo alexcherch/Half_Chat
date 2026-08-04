@@ -17,6 +17,7 @@ class Group(SQLModel, table=True):
     created_by: str
     created_at: str
     is_direct: bool = Field(default=False)
+    pinned_message_id: Optional[int] = Field(default=None)
 
 
 class GroupMember(SQLModel, table=True):
@@ -33,3 +34,5 @@ class Message(SQLModel, table=True):
     timestamp: str
     group_id: int = Field(default=1, foreign_key="chat_group.id", index=True)
     reply_to_id: Optional[int] = Field(default=None, foreign_key="message.id")
+    forwarded_from_id: Optional[int] = Field(default=None, foreign_key="message.id")
+    forwarded_group_id: Optional[int] = Field(default=None)

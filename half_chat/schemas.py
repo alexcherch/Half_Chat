@@ -18,6 +18,10 @@ class MessageUpdate(BaseModel):
     text: str
 
 
+class ForwardCreate(BaseModel):
+    group_id: int
+
+
 class GroupCreate(BaseModel):
     name: str
 
@@ -29,6 +33,7 @@ class GroupRead(BaseModel):
     created_at: str
     member_count: int = 0
     is_direct: bool = False
+    pinned_message_id: Optional[int] = None
 
 
 class DirectCreate(BaseModel):
