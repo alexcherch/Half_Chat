@@ -45,3 +45,4 @@ class Message(SQLModel, table=True):
     reply_to_id: Optional[int] = Field(default=None, foreign_key="message.id")
     forwarded_from_id: Optional[int] = Field(default=None, foreign_key="message.id")
     forwarded_group_id: Optional[int] = Field(default=None)
+    deleted: bool = Field(default=False)

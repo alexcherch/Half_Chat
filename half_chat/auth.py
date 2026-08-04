@@ -49,3 +49,21 @@ def get_current_user(
         if user is None:
             raise HTTPException(status_code=401, detail="Пользователь не найден")
         return user
+
+
+def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+) -> Optional[User]:
+    if credentials is None:
+        return None
+
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+        if not isinstance(username, str):
+            return None
+    except JWTError:
+        return None
+
+    with Session(engine) as session:
+        return session.exec(select(User).where(User.username == username)).first()

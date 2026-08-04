@@ -1,12 +1,12 @@
 import re
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from jose import JWTError, jwt
 from sqlmodel import Session, select
 
-from half_chat.auth import get_current_user
+from half_chat.auth import get_current_user, get_optional_user
 from half_chat.config import ALGORITHM, SECRET_KEY
 from half_chat.database import engine
 from half_chat.models import Group, GroupMember, Message, User
@@ -16,6 +16,16 @@ from half_chat.ws import manager
 router = APIRouter()
 
 MENTION_RE = re.compile(r"@(\w+)")
+
+
+def is_group_admin(session: Session, group_id: int, username: str) -> bool:
+    membership = session.exec(
+        select(GroupMember).where(
+            GroupMember.group_id == group_id,
+            GroupMember.username == username,
+        )
+    ).first()
+    return bool(membership and membership.role == "admin")
 
 
 def get_ws_username(websocket: WebSocket) -> str | None:
@@ -130,11 +140,17 @@ def get_messages(
     group_id: int = Query(default=1),
     after_id: int = Query(default=0),
     limit: int = Query(default=20, le=100),
+    current_user: Optional[User] = Depends(get_optional_user),
 ):
     with Session(engine) as session:
         group = session.get(Group, group_id)
         if not group:
             raise HTTPException(status_code=404, detail="Группа не найдена")
+
+        current_username = current_user.username if current_user else None
+        is_admin = False
+        if current_user:
+            is_admin = is_group_admin(session, group_id, current_user.username)
 
         statement = (
             select(Message)
@@ -143,7 +159,17 @@ def get_messages(
             .order_by(Message.id.asc())  # type: ignore[union-attr]
         )
         results = session.exec(statement).all()
-        return results[-limit:] if results else []
+
+        visible: List[Message] = []
+        for msg in results:
+            if not msg.deleted:
+                visible.append(msg)
+            elif group.is_direct:
+                if current_username and msg.username == current_username:
+                    visible.append(msg)
+            elif is_admin:
+                visible.append(msg)
+        return visible[-limit:] if visible else []
 
 
 @router.post("/api/messages/{message_id}/forward", response_model=Message, status_code=201)
@@ -262,10 +288,15 @@ async def delete_message(
             group.pinned_message_id = None
             session.add(group)
 
-        session.delete(message)
+        message.deleted = True
+        message_dict = message.model_dump()
+        session.add(message)
         session.commit()
 
-    await manager.broadcast(group_id, {"type": "delete_message", "message_id": message_id})
+    await manager.broadcast(
+        group_id,
+        {"type": "delete_message", "message_id": message_id, "message": message_dict},
+    )
     return {
         "status": "success",
         "message": f"Сообщение {message_id} успешно удалено",
