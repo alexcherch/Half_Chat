@@ -62,6 +62,10 @@ alembic/
 - POST /api/groups/{id}/join — вступить в группу (auth)
 - GET /api/groups/{id}/members — список участников с ролями (public)
 - PUT /api/groups/{id}/members/{username}/role — `{role}` admin/moderator/member (auth, только админ)
+- DELETE /api/groups/{id}/members/{username} — удалить участника (auth, только админ)
+- POST /api/groups/{id}/members/{username}/ban — забанить (auth, только админ, запрещает вступление/добавление)
+- POST /api/groups/{id}/members/{username}/unban — разбанить (auth, только админ)
+- GET /api/groups/{id}/banned — список забаненных (auth, только админ)
 - POST /api/directs — `{username}`, создать/вернуть личный чат 1-на-1 (auth, idempotent)
 - GET /api/directs — список личных чатов с peer (auth)
 - Личные чаты: Group.is_direct=True, ровно 2 участника; в них запрещены add-member/join/leave
@@ -76,6 +80,7 @@ alembic/
 - Group.pinned_message_id — закреплённое сообщение группы (один пин)
 - GroupMember.__tablename__ = "group_member"
 - GroupMember.role — admin/moderator/member (по умолчанию member; создатель группы становится admin)
+- GroupBan.__tablename__ = "group_ban" — бан-лист (group_id, username)
 
 ## Timestamps
 - Все в ISO-формате (`datetime.now().isoformat()`)

@@ -6,7 +6,7 @@ from sqlmodel import Session, func, select
 
 from half_chat.auth import get_current_user
 from half_chat.database import engine
-from half_chat.models import Group, GroupMember, User
+from half_chat.models import Group, GroupBan, GroupMember, User
 from half_chat.schemas import (
     AddMember,
     DirectCreate,
@@ -189,6 +189,15 @@ def add_member(
         if not user:
             raise HTTPException(status_code=404, detail="Пользователь не найден")
 
+        banned = session.exec(
+            select(GroupBan).where(
+                GroupBan.group_id == group_id,
+                GroupBan.username == member_data.username.strip(),
+            )
+        ).first()
+        if banned:
+            raise HTTPException(status_code=403, detail="Пользователь забанен в этой группе")
+
         existing = session.exec(
             select(GroupMember).where(
                 GroupMember.group_id == group_id,
@@ -214,6 +223,15 @@ def join_group(
             raise HTTPException(status_code=404, detail="Группа не найдена")
         if group.is_direct:
             raise HTTPException(status_code=400, detail="Нельзя вступить в личный чат")
+
+        banned = session.exec(
+            select(GroupBan).where(
+                GroupBan.group_id == group_id,
+                GroupBan.username == current_user.username,
+            )
+        ).first()
+        if banned:
+            raise HTTPException(status_code=403, detail="Вы забанены в этой группе")
 
         existing = session.exec(
             select(GroupMember).where(
@@ -331,3 +349,126 @@ def set_member_role(
         session.add(membership)
         session.commit()
         return {"status": "success", "group_id": group_id, "username": username, "role": role}
+
+
+def get_admin_or_403(session: Session, group_id: int, username: str) -> GroupMember:
+    actor = session.exec(
+        select(GroupMember).where(
+            GroupMember.group_id == group_id,
+            GroupMember.username == username,
+        )
+    ).first()
+    if not actor or actor.role != "admin":
+        raise HTTPException(status_code=403, detail="Только админ может выполнить это действие")
+    return actor
+
+
+@router.delete("/api/groups/{group_id}/members/{username}", status_code=200)
+def remove_member(
+    group_id: int,
+    username: str,
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        group = session.get(Group, group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+        if group.is_direct:
+            raise HTTPException(status_code=400, detail="Нельзя удалять участников личного чата")
+        get_admin_or_403(session, group_id, current_user.username)
+
+        if username == current_user.username:
+            raise HTTPException(status_code=400, detail="Выйдите из группы через leave")
+
+        membership = session.exec(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.username == username,
+            )
+        ).first()
+        if not membership:
+            raise HTTPException(status_code=404, detail="Участник не найден в группе")
+        if membership.role == "admin":
+            raise HTTPException(status_code=400, detail="Нельзя удалить админа")
+
+        session.delete(membership)
+        session.commit()
+        return {"status": "success", "group_id": group_id, "username": username}
+
+
+@router.post("/api/groups/{group_id}/members/{username}/ban", status_code=200)
+def ban_member(
+    group_id: int,
+    username: str,
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        group = session.get(Group, group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+        if group.is_direct:
+            raise HTTPException(status_code=400, detail="Нельзя банить в личном чате")
+        get_admin_or_403(session, group_id, current_user.username)
+
+        if username == current_user.username:
+            raise HTTPException(status_code=400, detail="Нельзя забанить самого себя")
+
+        membership = session.exec(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.username == username,
+            )
+        ).first()
+        if membership:
+            if membership.role == "admin":
+                raise HTTPException(status_code=400, detail="Нельзя забанить админа")
+            session.delete(membership)
+
+        existing_ban = session.exec(
+            select(GroupBan).where(
+                GroupBan.group_id == group_id,
+                GroupBan.username == username,
+            )
+        ).first()
+        if not existing_ban:
+            session.add(GroupBan(group_id=group_id, username=username))
+        session.commit()
+        return {"status": "success", "group_id": group_id, "username": username, "banned": True}
+
+
+@router.post("/api/groups/{group_id}/members/{username}/unban", status_code=200)
+def unban_member(
+    group_id: int,
+    username: str,
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        group = session.get(Group, group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+        get_admin_or_403(session, group_id, current_user.username)
+
+        ban = session.exec(
+            select(GroupBan).where(
+                GroupBan.group_id == group_id,
+                GroupBan.username == username,
+            )
+        ).first()
+        if not ban:
+            raise HTTPException(status_code=404, detail="Пользователь не в бане")
+
+        session.delete(ban)
+        session.commit()
+        return {"status": "success", "group_id": group_id, "username": username, "banned": False}
+
+
+@router.get("/api/groups/{group_id}/banned", response_model=List[str])
+def get_banned_users(group_id: int, current_user: User = Depends(get_current_user)):
+    with Session(engine) as session:
+        group = session.get(Group, group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+        get_admin_or_403(session, group_id, current_user.username)
+
+        banned = session.exec(select(GroupBan.username).where(GroupBan.group_id == group_id)).all()
+        return banned

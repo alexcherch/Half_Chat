@@ -59,6 +59,10 @@ Credentials БД — в `half_chat/db_config.py` (gitignored, скопируй �
 | `POST` | `/api/groups/{id}/leave` | Выйти из группы | Да |
 | `GET` | `/api/groups/{id}/members` | Список участников с ролями | Нет |
 | `PUT` | `/api/groups/{id}/members/{username}/role` | Сменить роль `{role}` (admin/moderator/member) | Да (админ) |
+| `DELETE` | `/api/groups/{id}/members/{username}` | Удалить участника | Да (админ) |
+| `POST` | `/api/groups/{id}/members/{username}/ban` | Забанить участника | Да (админ) |
+| `POST` | `/api/groups/{id}/members/{username}/unban` | Разбанить участника | Да (админ) |
+| `GET` | `/api/groups/{id}/banned` | Список забаненных | Да (админ) |
 | `POST` | `/api/directs` | Создать/вернуть личный чат 1-на-1 `{username}` (idempotent) | Да |
 | `GET` | `/api/directs` | Список личных чатов с peer | Да |
 
@@ -107,6 +111,12 @@ erDiagram
         string role
     }
 
+    group_ban {
+        int id PK
+        int group_id FK
+        string username
+    }
+
     Message {
         int id PK
         string username
@@ -122,6 +132,7 @@ erDiagram
     Message ||--o{ Message : "пересылка"
     User ||--o{ group_member : "участвует (по username)"
     chat_group ||--o{ group_member : "содержит"
+    chat_group ||--o{ group_ban : "бан-лист"
     chat_group ||--o{ Message : "содержит сообщения"
     chat_group o|--o| Message : "закреплённое"
 ```

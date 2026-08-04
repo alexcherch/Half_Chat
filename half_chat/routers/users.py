@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 
 from half_chat.auth import get_current_user, hash_password, verify_password
 from half_chat.database import engine
-from half_chat.models import GroupMember, Message, User
+from half_chat.models import GroupBan, GroupMember, Message, User
 from half_chat.schemas import PasswordUpdate, UserUpdate
 from half_chat.ws import manager
 
@@ -62,6 +62,11 @@ def update_me(update_data: UserUpdate, current_user: User = Depends(get_current_
                 select(GroupMember).where(GroupMember.username == old_username)
             ).all():
                 member.username = new_username
+
+            for ban in session.exec(  # type: ignore[union-attr]
+                select(GroupBan).where(GroupBan.username == old_username)
+            ).all():
+                ban.username = new_username
 
         if update_data.date_of_birth is not None:
             user.date_of_birth = update_data.date_of_birth.strip() or None
