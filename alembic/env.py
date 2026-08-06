@@ -10,8 +10,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from sqlmodel import SQLModel
 
-import half_chat.models  # noqa: F401
-from half_chat.config import DATABASE_URL
+import nedochat.models  # noqa: F401
+from nedochat.config import DATABASE_URL
 
 config = context.config
 config.set_main_option("sqlalchemy.url", DATABASE_URL)

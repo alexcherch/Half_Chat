@@ -1,6 +1,6 @@
 from sqlmodel import Session, SQLModel, create_engine
 
-from half_chat.config import DATABASE_URL
+from nedochat.config import DATABASE_URL
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 

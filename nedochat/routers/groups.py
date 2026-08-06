@@ -4,10 +4,10 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, func, select
 
-from half_chat.auth import get_current_user
-from half_chat.database import engine
-from half_chat.models import Group, GroupBan, GroupMember, User
-from half_chat.schemas import (
+from nedochat.auth import get_current_user
+from nedochat.database import engine
+from nedochat.models import Group, GroupBan, GroupMember, User
+from nedochat.schemas import (
     AddMember,
     DirectCreate,
     DirectRead,

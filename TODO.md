@@ -1,4 +1,4 @@
-# TODO — Half Chat
+# TODO — Nedochat
 
 ## Бэкенд
 

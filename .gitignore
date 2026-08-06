@@ -135,7 +135,7 @@ celerybeat-schedule
 celerybeat.pid
 
 # Local database config
-half_chat/db_config.py
+nedochat/db_config.py
 
 # User uploads (avatars)
 static/

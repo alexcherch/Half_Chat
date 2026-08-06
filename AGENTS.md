@@ -1,4 +1,4 @@
-# Half Chat — проектные конвенции
+# Nedochat — проектные конвенции
 
 ## Стек
 - Python 3.14, FastAPI, SQLModel, PostgreSQL
@@ -25,8 +25,8 @@ bash dev.sh docker:down  # docker compose down
 
 ## Структура
 ```
-main.py                  # точка входа (from half_chat.main import app)
-half_chat/
+main.py                  # точка входа (from nedochat.main import app)
+nedochat/
   main.py                # FastAPI app, CORS, роутеры, seed general group
   config.py              # SECRET_KEY, ALGORITHM, DATABASE_URL
   db_config.py           # локальные credentials (gitignored)
@@ -101,7 +101,7 @@ alembic upgrade head
 ```
 
 ## Конфигурация
-- `DATABASE_URL` — из `half_chat/db_config.py` (gitignored) или `DATABASE_URL` env
+- `DATABASE_URL` — из `nedochat/db_config.py` (gitignored) или `DATABASE_URL` env
 - `SECRET_KEY` — из env или дефолт
 - Чувствительные данные только в `db_config.py`, не в `config.py`
 

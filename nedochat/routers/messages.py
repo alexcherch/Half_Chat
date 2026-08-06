@@ -6,12 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSock
 from jose import JWTError, jwt
 from sqlmodel import Session, select
 
-from half_chat.auth import get_current_user
-from half_chat.config import ALGORITHM, SECRET_KEY
-from half_chat.database import engine
-from half_chat.models import Group, GroupMember, Message, User
-from half_chat.schemas import ForwardCreate, MessageUpdate
-from half_chat.ws import manager
+from nedochat.auth import get_current_user
+from nedochat.config import ALGORITHM, SECRET_KEY
+from nedochat.database import engine
+from nedochat.models import Group, GroupMember, Message, User
+from nedochat.schemas import ForwardCreate, MessageUpdate
+from nedochat.ws import manager
 
 router = APIRouter()
 
@@ -170,8 +170,7 @@ def get_messages(
             )
             results = session.exec(statement).all()
             older = results[:limit]
-            older.reverse()
-            return older
+            return older[::-1]
 
         statement = (
             select(Message)

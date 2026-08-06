@@ -1,14 +1,16 @@
+name: nedochat
+
 services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: half_chat
-      POSTGRES_PASSWORD: half_chat
-      POSTGRES_DB: half_chat
+      POSTGRES_USER: nedochat
+      POSTGRES_PASSWORD: nedochat
+      POSTGRES_DB: nedochat
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U half_chat"]
+      test: ["CMD-SHELL", "pg_isready -U nedochat"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -19,7 +21,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://half_chat:half_chat@db:5432/half_chat
+      DATABASE_URL: postgresql://nedochat:nedochat@db:5432/nedochat
       SECRET_KEY: change-me-in-production
     ports:
       - "8000:8000"

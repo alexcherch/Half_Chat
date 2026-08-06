@@ -7,9 +7,9 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlmodel import Session, select
 
-from half_chat.config import ACCESS_TOKEN_EXPIRE_DAYS, ALGORITHM, SECRET_KEY
-from half_chat.database import engine
-from half_chat.models import User
+from nedochat.config import ACCESS_TOKEN_EXPIRE_DAYS, ALGORITHM, SECRET_KEY
+from nedochat.database import engine
+from nedochat.models import User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer(auto_error=False)

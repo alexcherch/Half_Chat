@@ -14,8 +14,8 @@ import psycopg2  # noqa: E402
 from sqlalchemy import create_engine  # noqa: E402
 from sqlmodel import SQLModel  # noqa: E402
 
-import half_chat.models  # noqa: F401, E402
-from half_chat.config import DATABASE_URL  # noqa: E402
+import nedochat.models  # noqa: F401, E402
+from nedochat.config import DATABASE_URL  # noqa: E402
 
 
 def parse_url(url: str) -> dict:
@@ -31,7 +31,7 @@ def parse_url(url: str) -> dict:
         "password": password or "",
         "host": host or "localhost",
         "port": int(port) if port else 5432,
-        "dbname": dbname or "half_chat",
+        "dbname": dbname or "nedochat",
     }
 
 

@@ -6,11 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session, select
 
-from half_chat.database import engine, init_db
-from half_chat.models import Group
-from half_chat.routers import auth, groups, messages, users
+from nedochat.database import engine, init_db
+from nedochat.models import Group
+from nedochat.routers import auth, groups, messages, users
 
-app = FastAPI(title="Half Chat")
+app = FastAPI(title="Nedochat")
 
 app.add_middleware(
     CORSMiddleware,

@@ -1,4 +1,4 @@
-# Half Chat
+# Nedochat
 
 Чат-бекенд на FastAPI + PostgreSQL с JWT-авторизацией, групповыми комнатами и WebSockets в реальном времени.
 
@@ -22,7 +22,7 @@ bash dev.sh docker:down  # docker compose down
 
 ## Конфигурация
 
-Credentials БД — в `half_chat/db_config.py` (gitignored, скопируй с `db_config.example.py`), либо через env `DATABASE_URL`.
+Credentials БД — в `nedochat/db_config.py` (gitignored, скопируй с `db_config.example.py`), либо через env `DATABASE_URL`.
 
 | Переменная | По умолчанию | Описание |
 |---|---|---|

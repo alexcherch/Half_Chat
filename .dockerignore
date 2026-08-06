@@ -5,6 +5,6 @@ __pycache__
 *.py[cod]
 *.egg-info
 .env
-half_chat/db_config.py
+nedochat/db_config.py
 scripts
 .dev/

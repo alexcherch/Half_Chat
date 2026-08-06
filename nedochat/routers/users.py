@@ -4,11 +4,11 @@ from typing import List
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlmodel import Session, select
 
-from half_chat.auth import get_current_user, hash_password, verify_password
-from half_chat.database import engine
-from half_chat.models import GroupBan, GroupMember, Message, User
-from half_chat.schemas import PasswordUpdate, UserUpdate
-from half_chat.ws import manager
+from nedochat.auth import get_current_user, hash_password, verify_password
+from nedochat.database import engine
+from nedochat.models import GroupBan, GroupMember, Message, User
+from nedochat.schemas import PasswordUpdate, UserUpdate
+from nedochat.ws import manager
 
 router = APIRouter()
 
