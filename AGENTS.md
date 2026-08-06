@@ -16,7 +16,8 @@ bash dev.sh docker:down  # docker compose down
 ```
 
 ## Docker
-- `Dockerfile` — python:3.14-slim, poetry install --only main (без dev)
+- `Dockerfile` — python:3.14-slim, pip install -r requirements.txt (без dev)
+- `requirements.txt` — генерируется из poetry.lock: `poetry export -f requirements.txt --output requirements.txt --only main` (требует плагин `poetry-plugin-export`)
 - `docker-compose.yml` — сервисы `db` (postgres:16) и `app`
 - Конфиг из env: `DATABASE_URL`, `SECRET_KEY` (db_config.py в контейнер не попадает — в .dockerignore)
 - При старте: `alembic upgrade head` → `uvicorn main:app`
@@ -50,21 +51,43 @@ alembic/
 - POST /api/register — `{username, password, date_of_birth?}`
 - POST /api/login — `{username, password}` → `{access_token, token_type}`
 - POST /api/messages — `{text, group_id, reply_to_id?}` (auth)
-- GET /api/messages?group_id=&after_id=&limit= (public)
-- PUT/DELETE /api/messages/{id} (auth, только свои)
-- WS /api/ws/{group_id}?token= — реальное время: события `new_message`, `update_message`, `delete_message`, `mention`, `presence`
+- GET /api/messages?group_id=&after_id=&limit= (auth) — soft-delete: в группах удале. видны только админу, в личных чатах — только автору
+- GET /api/messages/search?q=&group_id?=&limit= (auth) — поиск по тексту сообщений (ILIKE) в группах пользователя, с теми же правилами видимости удалённых
+- PUT /api/messages/{id} (auth, только свои)
+- DELETE /api/messages/{id} (auth, только свои) — soft-delete (столбец deleted, строку не стирает)
+- POST /api/messages/{id}/forward — `{group_id}` (auth), копия в др. группу с forwarded_from_id/forwarded_group_id
+- POST /api/messages/{id}/pin — закрепить (auth, один пин на группу в chat_group.pinned_message_id)
+- POST /api/messages/{id}/unpin — открепить (auth)
+- WS /api/ws/{group_id}?token= — реальное время: события `new_message`, `update_message`, `delete_message`, `mention`, `presence`, `pin_message`, `unpin_message`
 - POST /api/groups — `{name}` (auth, создатель становится участником)
 - GET /api/groups — список групп пользователя с member_count (auth)
 - POST /api/groups/{id}/members — `{username}` (auth)
 - POST /api/groups/{id}/join — вступить в группу (auth)
-- GET /api/groups/{id}/members (public)
+- GET /api/groups/{id}/members — список участников с ролями (auth)
+- PUT /api/groups/{id}/members/{username}/role — `{role}` admin/moderator/member (auth, только админ)
+- DELETE /api/groups/{id}/members/{username} — удалить участника (auth, только админ)
+- POST /api/groups/{id}/members/{username}/ban — забанить (auth, только админ, запрещает вступление/добавление)
+- POST /api/groups/{id}/members/{username}/unban — разбанить (auth, только админ)
+- GET /api/groups/{id}/banned — список забаненных (auth, только админ)
+- POST /api/groups/{id}/members/{username}/mute — запрет писать (auth, только админ; блокирует POST /messages и forward)
+- POST /api/groups/{id}/members/{username}/unmute — снять запрет (auth, только админ)
+- POST /api/directs — `{username}`, создать/вернуть личный чат 1-на-1 (auth, idempotent)
+- GET /api/directs — список личных чатов с peer (auth)
+- Личные чаты: Group.is_direct=True, ровно 2 участника; в них запрещены add-member/join/leave
 
 ## Models
 - Message.reply_to_id — FK на Message.id, опционально
+- Message.forwarded_from_id — FK на Message.id (ON DELETE SET NULL), forwarded_group_id — исходная группа
+- Message.deleted — bool (по умолчанию False), soft-delete
 - Message.group_id — FK на chat_group.id, index
 - User.date_of_birth — опционально, строка
 - Group.__tablename__ = "chat_group"
+- Group.is_direct — bool (по умолчанию False), личные чаты
+- Group.pinned_message_id — закреплённое сообщение группы (один пин)
 - GroupMember.__tablename__ = "group_member"
+- GroupMember.role — admin/moderator/member (по умолчанию member; создатель группы становится admin)
+- GroupMember.muted — bool, запрет писать сообщения
+- GroupBan.__tablename__ = "group_ban" — бан-лист (group_id, username)
 
 ## Timestamps
 - Все в ISO-формате (`datetime.now().isoformat()`)

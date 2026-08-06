@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from jose import JWTError, jwt
@@ -9,13 +9,36 @@ from sqlmodel import Session, select
 from half_chat.auth import get_current_user
 from half_chat.config import ALGORITHM, SECRET_KEY
 from half_chat.database import engine
-from half_chat.models import Group, Message, User
-from half_chat.schemas import MessageUpdate
+from half_chat.models import Group, GroupMember, Message, User
+from half_chat.schemas import ForwardCreate, MessageUpdate
 from half_chat.ws import manager
 
 router = APIRouter()
 
 MENTION_RE = re.compile(r"@(\w+)")
+
+
+def is_group_admin(session: Session, group_id: int, username: str) -> bool:
+    membership = session.exec(
+        select(GroupMember).where(
+            GroupMember.group_id == group_id,
+            GroupMember.username == username,
+        )
+    ).first()
+    return bool(membership and membership.role == "admin")
+
+
+def _message_visible(
+    session: Session,
+    group: Group,
+    message: Message,
+    current_user: User,
+) -> bool:
+    if not message.deleted:
+        return True
+    if group.is_direct:
+        return message.username == current_user.username
+    return is_group_admin(session, group.id, current_user.username)  # type: ignore[arg-type]
 
 
 def get_ws_username(websocket: WebSocket) -> str | None:
@@ -30,13 +53,29 @@ def get_ws_username(websocket: WebSocket) -> str | None:
         return None
 
 
+def _check_can_post(session: Session, group_id: int, username: str) -> None:
+    membership = session.exec(
+        select(GroupMember).where(
+            GroupMember.group_id == group_id,
+            GroupMember.username == username,
+        )
+    ).first()
+    if membership and membership.muted:
+        raise HTTPException(
+            status_code=403,
+            detail="Вы не можете писать сообщения в этой группе",
+        )
+
+
 @router.websocket("/api/ws/{group_id}")
 async def websocket_endpoint(websocket: WebSocket, group_id: int):
     await manager.connect(group_id, websocket)
     username = get_ws_username(websocket)
     if username:
         await manager.connect_user(username, websocket)
-        await manager.broadcast(group_id, {"type": "presence", "username": username, "online": True})
+        await manager.broadcast(
+            group_id, {"type": "presence", "username": username, "online": True}
+        )
     try:
         while True:
             await websocket.receive_text()
@@ -63,6 +102,8 @@ async def send_message(
         group = session.get(Group, message_data.group_id)
         if not group:
             raise HTTPException(status_code=404, detail="Группа не найдена")
+
+        _check_can_post(session, group.id, current_user.username)  # type: ignore[arg-type]
 
         if message_data.reply_to_id:
             reply_msg = session.get(Message, message_data.reply_to_id)
@@ -113,6 +154,7 @@ def get_messages(
     after_id: int = Query(default=0),
     before_id: int = Query(default=0),
     limit: int = Query(default=20, le=100),
+    current_user: User = Depends(get_current_user),
 ):
     with Session(engine) as session:
         group = session.get(Group, group_id)
@@ -138,7 +180,136 @@ def get_messages(
             .order_by(Message.id.asc())  # type: ignore[union-attr]
         )
         results = session.exec(statement).all()
-        return results[-limit:] if results else []
+
+        visible = [msg for msg in results if _message_visible(session, group, msg, current_user)]
+        return visible[-limit:] if visible else []
+
+
+@router.get("/api/messages/search", response_model=List[Message])
+def search_messages(
+    q: str = Query(..., min_length=1),
+    group_id: Optional[int] = Query(default=None),
+    limit: int = Query(default=20, le=100),
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        memberships = session.exec(
+            select(GroupMember).where(GroupMember.username == current_user.username)
+        ).all()
+        allowed_group_ids = [gm.group_id for gm in memberships]
+        if not allowed_group_ids:
+            return []
+
+        escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        statement = (
+            select(Message)
+            .where(Message.group_id.in_(allowed_group_ids))  # type: ignore[attr-defined]
+            .where(Message.text.ilike(f"%{escaped}%", escape="\\"))  # type: ignore[attr-defined]
+            .order_by(Message.id.desc())  # type: ignore[union-attr]
+        )
+        if group_id is not None:
+            if group_id not in allowed_group_ids:
+                raise HTTPException(status_code=403, detail="Вы не состоите в этой группе")
+            statement = statement.where(Message.group_id == group_id)
+
+        results = session.exec(statement.limit(limit)).all()
+
+        visible = []
+        for msg in results:
+            group = session.get(Group, msg.group_id)
+            if group and _message_visible(session, group, msg, current_user):
+                visible.append(msg)
+        return visible
+
+
+@router.post("/api/messages/{message_id}/forward", response_model=Message, status_code=201)
+async def forward_message(
+    message_id: int,
+    forward_data: ForwardCreate,
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        original = session.exec(select(Message).where(Message.id == message_id)).first()
+        if not original:
+            raise HTTPException(status_code=404, detail=f"Сообщение с ID {message_id} не найдено")
+
+        target_group = session.get(Group, forward_data.group_id)
+        if not target_group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+
+        _check_can_post(session, target_group.id, current_user.username)  # type: ignore[arg-type]
+
+        new_msg = Message(
+            username=current_user.username,
+            text=original.text,
+            timestamp=datetime.now().isoformat(),
+            group_id=target_group.id,
+            forwarded_from_id=original.id,
+            forwarded_group_id=original.group_id,
+        )
+        session.add(new_msg)
+        session.commit()
+        session.refresh(new_msg)
+
+    payload = new_msg.model_dump()
+    await manager.broadcast(new_msg.group_id, {"type": "new_message", "message": payload})
+    return new_msg
+
+
+@router.post("/api/messages/{message_id}/pin", status_code=200)
+async def pin_message(
+    message_id: int,
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        message = session.exec(select(Message).where(Message.id == message_id)).first()
+        if not message:
+            raise HTTPException(status_code=404, detail=f"Сообщение с ID {message_id} не найдено")
+
+        group = session.get(Group, message.group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+
+        group.pinned_message_id = message.id
+        group_id = message.group_id
+        message_dict = message.model_dump()
+        session.add(group)
+        session.commit()
+
+    await manager.broadcast(
+        group_id,
+        {"type": "pin_message", "message_id": message_id, "message": message_dict},
+    )
+    return {"status": "success", "group_id": group_id, "message_id": message_id}
+
+
+@router.post("/api/messages/{message_id}/unpin", status_code=200)
+async def unpin_message(
+    message_id: int,
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        message = session.exec(select(Message).where(Message.id == message_id)).first()
+        if not message:
+            raise HTTPException(status_code=404, detail=f"Сообщение с ID {message_id} не найдено")
+
+        group = session.get(Group, message.group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+
+        if group.pinned_message_id != message.id:
+            raise HTTPException(status_code=400, detail="Сообщение не закреплено в этой группе")
+
+        group.pinned_message_id = None
+        group_id = message.group_id
+        session.add(group)
+        session.commit()
+
+    await manager.broadcast(
+        group_id,
+        {"type": "unpin_message", "message_id": message_id},
+    )
+    return {"status": "success", "group_id": group_id, "message_id": message_id}
 
 
 @router.delete("/api/messages/{message_id}", status_code=200)
@@ -162,10 +333,20 @@ async def delete_message(
             )
 
         group_id = message.group_id
-        session.delete(message)
+        group = session.get(Group, group_id)
+        if group and group.pinned_message_id == message.id:
+            group.pinned_message_id = None
+            session.add(group)
+
+        message.deleted = True
+        message_dict = message.model_dump()
+        session.add(message)
         session.commit()
 
-    await manager.broadcast(group_id, {"type": "delete_message", "message_id": message_id})
+    await manager.broadcast(
+        group_id,
+        {"type": "delete_message", "message_id": message_id, "message": message_dict},
+    )
     return {
         "status": "success",
         "message": f"Сообщение {message_id} успешно удалено",

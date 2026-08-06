@@ -18,6 +18,10 @@ class MessageUpdate(BaseModel):
     text: str
 
 
+class ForwardCreate(BaseModel):
+    group_id: int
+
+
 class GroupCreate(BaseModel):
     name: str
 
@@ -28,10 +32,32 @@ class GroupRead(BaseModel):
     created_by: str
     created_at: str
     member_count: int = 0
+    is_direct: bool = False
+    pinned_message_id: Optional[int] = None
+
+
+class DirectCreate(BaseModel):
+    username: str
+
+
+class DirectRead(BaseModel):
+    id: int
+    peer: str
+    created_at: str
 
 
 class AddMember(BaseModel):
     username: str
+
+
+class MemberRead(BaseModel):
+    username: str
+    role: str
+    muted: bool = False
+
+
+class RoleUpdate(BaseModel):
+    role: str
 
 
 class UserUpdate(BaseModel):

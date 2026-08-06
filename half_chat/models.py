@@ -16,10 +16,21 @@ class Group(SQLModel, table=True):
     name: str = Field(index=True)
     created_by: str
     created_at: str
+    is_direct: bool = Field(default=False)
+    pinned_message_id: Optional[int] = Field(default=None)
 
 
 class GroupMember(SQLModel, table=True):
     __tablename__ = "group_member"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    group_id: int = Field(foreign_key="chat_group.id", index=True)
+    username: str
+    role: str = Field(default="member")
+    muted: bool = Field(default=False)
+
+
+class GroupBan(SQLModel, table=True):
+    __tablename__ = "group_ban"
     id: Optional[int] = Field(default=None, primary_key=True)
     group_id: int = Field(foreign_key="chat_group.id", index=True)
     username: str
@@ -32,3 +43,6 @@ class Message(SQLModel, table=True):
     timestamp: str
     group_id: int = Field(default=1, foreign_key="chat_group.id", index=True)
     reply_to_id: Optional[int] = Field(default=None, foreign_key="message.id")
+    forwarded_from_id: Optional[int] = Field(default=None, foreign_key="message.id")
+    forwarded_group_id: Optional[int] = Field(default=None)
+    deleted: bool = Field(default=False)
