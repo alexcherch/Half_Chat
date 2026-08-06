@@ -51,6 +51,7 @@ alembic/
 - POST /api/login — `{username, password}` → `{access_token, token_type}`
 - POST /api/messages — `{text, group_id, reply_to_id?}` (auth)
 - GET /api/messages?group_id=&after_id=&limit= (auth) — soft-delete: в группах удале. видны только админу, в личных чатах — только автору
+- GET /api/messages/search?q=&group_id?=&limit= (auth) — поиск по тексту сообщений (ILIKE) в группах пользователя, с теми же правилами видимости удалённых
 - PUT /api/messages/{id} (auth, только свои)
 - DELETE /api/messages/{id} (auth, только свои) — soft-delete (столбец deleted, строку не стирает)
 - POST /api/messages/{id}/forward — `{group_id}` (auth), копия в др. группу с forwarded_from_id/forwarded_group_id

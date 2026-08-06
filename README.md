@@ -74,6 +74,7 @@ Credentials БД — в `half_chat/db_config.py` (gitignored, скопируй �
 |---|---|---|---|
 | `POST` | `/api/messages` | Отправить `{text, group_id, reply_to_id?}`; `@username` в тексте создаёт уведомление | Да |
 | `GET` | `/api/messages?group_id=&after_id=&limit=` | История сообщений (удал. видят: админ в группах, автор в личках) | Да |
+| `GET` | `/api/messages/search?q=&group_id?=&limit=` | Поиск по тексту сообщений (в своих группах) | Да |
 | `PUT` | `/api/messages/{id}` | Редактировать текст | Да (свои) |
 | `DELETE` | `/api/messages/{id}` | Удалить сообщение (soft-delete) | Да (свои) |
 | `POST` | `/api/messages/{id}/forward` | Переслать `{group_id}` в другую группу | Да |

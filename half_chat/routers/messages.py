@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from jose import JWTError, jwt
@@ -26,6 +26,19 @@ def is_group_admin(session: Session, group_id: int, username: str) -> bool:
         )
     ).first()
     return bool(membership and membership.role == "admin")
+
+
+def _message_visible(
+    session: Session,
+    group: Group,
+    message: Message,
+    current_user: User,
+) -> bool:
+    if not message.deleted:
+        return True
+    if group.is_direct:
+        return message.username == current_user.username
+    return is_group_admin(session, group.id, current_user.username)  # type: ignore[arg-type]
 
 
 def get_ws_username(websocket: WebSocket) -> str | None:
@@ -147,8 +160,6 @@ def get_messages(
         if not group:
             raise HTTPException(status_code=404, detail="Группа не найдена")
 
-        is_admin = is_group_admin(session, group_id, current_user.username)
-
         statement = (
             select(Message)
             .where(Message.group_id == group_id)
@@ -157,16 +168,45 @@ def get_messages(
         )
         results = session.exec(statement).all()
 
-        visible: List[Message] = []
-        for msg in results:
-            if not msg.deleted:
-                visible.append(msg)
-            elif group.is_direct:
-                if msg.username == current_user.username:
-                    visible.append(msg)
-            elif is_admin:
-                visible.append(msg)
+        visible = [msg for msg in results if _message_visible(session, group, msg, current_user)]
         return visible[-limit:] if visible else []
+
+
+@router.get("/api/messages/search", response_model=List[Message])
+def search_messages(
+    q: str = Query(..., min_length=1),
+    group_id: Optional[int] = Query(default=None),
+    limit: int = Query(default=20, le=100),
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        memberships = session.exec(
+            select(GroupMember).where(GroupMember.username == current_user.username)
+        ).all()
+        allowed_group_ids = [gm.group_id for gm in memberships]
+        if not allowed_group_ids:
+            return []
+
+        escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        statement = (
+            select(Message)
+            .where(Message.group_id.in_(allowed_group_ids))  # type: ignore[attr-defined]
+            .where(Message.text.ilike(f"%{escaped}%", escape="\\"))  # type: ignore[attr-defined]
+            .order_by(Message.id.desc())  # type: ignore[union-attr]
+        )
+        if group_id is not None:
+            if group_id not in allowed_group_ids:
+                raise HTTPException(status_code=403, detail="Вы не состоите в этой группе")
+            statement = statement.where(Message.group_id == group_id)
+
+        results = session.exec(statement.limit(limit)).all()
+
+        visible = []
+        for msg in results:
+            group = session.get(Group, msg.group_id)
+            if group and _message_visible(session, group, msg, current_user):
+                visible.append(msg)
+        return visible
 
 
 @router.post("/api/messages/{message_id}/forward", response_model=Message, status_code=201)
