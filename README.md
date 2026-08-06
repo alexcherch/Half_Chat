@@ -18,7 +18,7 @@ bash dev.sh docker:up    # docker compose up --build (app + postgres)
 bash dev.sh docker:down  # docker compose down
 ```
 
-Поднимаются два сервиса: `db` (postgres:16) и `app` (build из `Dockerfile`). При старте применяются миграции, затем запускается uvicorn на `:8000`. Конфиг — через env `DATABASE_URL` и `SECRET_KEY` (`db_config.py` в контейнер не попадает).
+Поднимаются два сервиса: `db` (postgres:16) и `app` (build из `Dockerfile`). При старте применяются миграции, затем запускается uvicorn на `:8000`. Конфиг — через env `DATABASE_URL` и `SECRET_KEY` (`db_config.py` в контейнер не попадает). Зависимости ставятся из `requirements.txt` (генерируется из poetry.lock: `poetry export -f requirements.txt --output requirements.txt --only main`).
 
 ## Конфигурация
 

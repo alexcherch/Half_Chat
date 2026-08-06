@@ -18,7 +18,7 @@ def search_users(q: str = Query(default="", min_length=0)):
         statement = select(User.username)
         if q.strip():
             statement = statement.where(User.username.ilike(f"%{q.strip()}%"))  # type: ignore[attr-defined]
-        statement = statement.order_by(User.username)  # type: ignore[attr-defined]
+        statement = statement.order_by(User.username)
         results = session.exec(statement).all()
         return results
 
@@ -53,17 +53,17 @@ def update_me(update_data: UserUpdate, current_user: User = Depends(get_current_
             old_username = user.username
             user.username = new_username
 
-            for message in session.exec(  # type: ignore[union-attr]
+            for message in session.exec(
                 select(Message).where(Message.username == old_username)
             ).all():
                 message.username = new_username
 
-            for member in session.exec(  # type: ignore[union-attr]
+            for member in session.exec(
                 select(GroupMember).where(GroupMember.username == old_username)
             ).all():
                 member.username = new_username
 
-            for ban in session.exec(  # type: ignore[union-attr]
+            for ban in session.exec(
                 select(GroupBan).where(GroupBan.username == old_username)
             ).all():
                 ban.username = new_username

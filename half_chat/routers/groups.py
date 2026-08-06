@@ -140,7 +140,7 @@ def list_groups(current_user: User = Depends(get_current_user)):
             session.exec(
                 select(Group)
                 .where(
-                    Group.id.in_(user_group_ids),  # type: ignore[union-attr,arg-type]
+                    Group.id.in_(user_group_ids),  # type: ignore[union-attr]
                     Group.is_direct == False,  # noqa: E712
                 )
                 .order_by(Group.id)  # type: ignore[arg-type]

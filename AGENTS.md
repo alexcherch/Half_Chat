@@ -16,7 +16,8 @@ bash dev.sh docker:down  # docker compose down
 ```
 
 ## Docker
-- `Dockerfile` — python:3.14-slim, poetry install --only main (без dev)
+- `Dockerfile` — python:3.14-slim, pip install -r requirements.txt (без dev)
+- `requirements.txt` — генерируется из poetry.lock: `poetry export -f requirements.txt --output requirements.txt --only main` (требует плагин `poetry-plugin-export`)
 - `docker-compose.yml` — сервисы `db` (postgres:16) и `app`
 - Конфиг из env: `DATABASE_URL`, `SECRET_KEY` (db_config.py в контейнер не попадает — в .dockerignore)
 - При старте: `alembic upgrade head` → `uvicorn main:app`
