@@ -35,17 +35,17 @@ Credentials БД — в `nedochat/db_config.py` (gitignored, скопируй с
 
 | Метод | Путь | Описание | Auth |
 |---|---|---|---|
-| `POST` | `/api/register` | Регистрация `{username, password, date_of_birth?}` (новый пользователь авто-добавляется в `general`) | Нет |
+| `POST` | `/api/register` | Регистрация `{username, password, date_of_birth?, display_name?}` (новый пользователь авто-добавляется в `general`) | Нет |
 | `POST` | `/api/login` | Вход, возвращает `access_token` | Нет |
 
 ### Пользователи
 
 | Метод | Путь | Описание | Auth |
 |---|---|---|---|
-| `GET` | `/api/users?q=` | Поиск пользователей по username | Нет |
+| `GET` | `/api/users?q=` | Поиск пользователей по username → `[{username, display_name}]` | Нет |
 | `GET` | `/api/users/{username}/status` | Статус онлайн/офлайн | Нет |
 | `GET` | `/api/users/me` | Профиль текущего пользователя | Да |
-| `PUT` | `/api/users/me` | Изменить username/дату рождения | Да |
+| `PUT` | `/api/users/me` | Изменить username/отображаемое имя/дату рождения | Да |
 | `PUT` | `/api/users/me/avatar` | Загрузить аватар (PNG/JPEG/WebP/GIF, макс. 5 МБ) | Да |
 | `PUT` | `/api/users/me/password` | Сменить пароль | Да |
 

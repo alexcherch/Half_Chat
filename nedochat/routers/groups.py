@@ -284,11 +284,19 @@ def get_members(
             raise HTTPException(status_code=404, detail="Группа не найдена")
 
         members = session.exec(select(GroupMember).where(GroupMember.group_id == group_id)).all()
+        usernames = [m.username for m in members]
+        display_names: dict = {}
+        if usernames:
+            display_names = {
+                u.username: u.display_name
+                for u in session.exec(select(User).where(User.username.in_(usernames))).all()  # type: ignore[attr-defined]
+            }
         return [
             MemberRead(
                 username=m.username,
                 role=m.role,
                 muted=m.muted,
+                display_name=display_names.get(m.username),
             )
             for m in members
         ]

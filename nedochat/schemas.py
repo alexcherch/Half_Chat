@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class UserCreate(BaseModel):
     username: str
     password: str
+    display_name: Optional[str] = None
     date_of_birth: Optional[str] = None
 
 
@@ -54,6 +55,12 @@ class MemberRead(BaseModel):
     username: str
     role: str
     muted: bool = False
+    display_name: Optional[str] = None
+
+
+class UserSearchRead(BaseModel):
+    username: str
+    display_name: Optional[str] = None
 
 
 class RoleUpdate(BaseModel):
@@ -62,6 +69,7 @@ class RoleUpdate(BaseModel):
 
 class UserUpdate(BaseModel):
     username: Optional[str] = None
+    display_name: Optional[str] = None
     date_of_birth: Optional[str] = None
 
 

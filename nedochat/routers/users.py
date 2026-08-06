@@ -7,7 +7,7 @@ from sqlmodel import Session, select
 from nedochat.auth import get_current_user, hash_password, verify_password
 from nedochat.database import engine
 from nedochat.models import GroupBan, GroupMember, Message, User
-from nedochat.schemas import PasswordUpdate, UserUpdate
+from nedochat.schemas import PasswordUpdate, UserSearchRead, UserUpdate
 from nedochat.ws import manager
 
 router = APIRouter()
@@ -35,15 +35,18 @@ def _is_valid_image(content: bytes, content_type: str) -> bool:
     return False
 
 
-@router.get("/api/users", response_model=List[str])
+@router.get("/api/users", response_model=List[UserSearchRead])
 def search_users(q: str = Query(default="", min_length=0)):
     with Session(engine) as session:
-        statement = select(User.username)
+        statement = select(User)
         if q.strip():
             statement = statement.where(User.username.ilike(f"%{q.strip()}%"))  # type: ignore[attr-defined]
         statement = statement.order_by(User.username)
         results = session.exec(statement).all()
-        return results
+        return [
+            UserSearchRead(username=user.username, display_name=user.display_name)
+            for user in results
+        ]
 
 
 @router.get("/api/users/{username}/status")
@@ -59,6 +62,7 @@ def get_user_status(username: str):
 def get_me(current_user: User = Depends(get_current_user)):
     return {
         "username": current_user.username,
+        "display_name": current_user.display_name,
         "date_of_birth": current_user.date_of_birth,
         "avatar_url": current_user.avatar_url,
     }
@@ -105,6 +109,7 @@ async def upload_avatar(
 
     return {
         "username": user.username,
+        "display_name": user.display_name,
         "date_of_birth": user.date_of_birth,
         "avatar_url": user.avatar_url,
     }
@@ -144,12 +149,16 @@ def update_me(update_data: UserUpdate, current_user: User = Depends(get_current_
         if update_data.date_of_birth is not None:
             user.date_of_birth = update_data.date_of_birth.strip() or None
 
+        if update_data.display_name is not None:
+            user.display_name = update_data.display_name.strip() or None
+
         session.add(user)
         session.commit()
         session.refresh(user)
 
     return {
         "username": user.username,
+        "display_name": user.display_name,
         "date_of_birth": user.date_of_birth,
         "avatar_url": user.avatar_url,
     }

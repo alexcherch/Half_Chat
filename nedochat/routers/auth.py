@@ -23,6 +23,7 @@ def register(user_data: UserCreate):
 
         user = User(
             username=user_data.username.strip(),
+            display_name=user_data.display_name.strip() if user_data.display_name else None,
             password_hash=hash_password(user_data.password),
             date_of_birth=user_data.date_of_birth.strip() if user_data.date_of_birth else None,
         )

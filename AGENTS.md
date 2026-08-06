@@ -48,7 +48,7 @@ alembic/
 ## Эндпоинты
 - Все под `/api/`
 - Auth через `Authorization: Bearer <token>`
-- POST /api/register — `{username, password, date_of_birth?}`
+- POST /api/register — `{username, password, date_of_birth?, display_name?}`
 - POST /api/login — `{username, password}` → `{access_token, token_type}`
 - POST /api/messages — `{text, group_id, reply_to_id?}` (auth)
 - GET /api/messages?group_id=&after_id=&limit= (auth) — soft-delete: в группах удале. видны только админу, в личных чатах — только автору
@@ -81,6 +81,7 @@ alembic/
 - Message.deleted — bool (по умолчанию False), soft-delete
 - Message.group_id — FK на chat_group.id, index
 - User.date_of_birth — опционально, строка
+- User.display_name — опционально, отображаемое имя (отдельно от username)
 - User.avatar_url — опционально, путь к аватарке (/static/avatars/u{id}{ext})
 - Group.__tablename__ = "chat_group"
 - Group.is_direct — bool (по умолчанию False), личные чаты
@@ -106,10 +107,10 @@ alembic upgrade head
 - Чувствительные данные только в `db_config.py`, не в `config.py`
 
 ## Эндпоинты (users)
-- GET /api/users?q= — поиск пользователей по username (public)
+- GET /api/users?q= — поиск пользователей по username (public) — `[{username, display_name}]`
 - GET /api/users/{username}/status — статус онлайн/офлайн (public), по активным WS-подключениям
-- GET /api/users/me — профиль текущего пользователя (auth) — `{username, date_of_birth, avatar_url}`
-- PUT /api/users/me — изменить username/date_of_birth (auth, обновляет Message/GroupMember)
+- GET /api/users/me — профиль текущего пользователя (auth) — `{username, display_name, date_of_birth, avatar_url}`
+- PUT /api/users/me — изменить username/display_name/date_of_birth (auth, обновляет Message/GroupMember)
 - PUT /api/users/me/avatar — загрузить аватар (auth, `multipart/form-data`, поле `file`; PNG/JPEG/WebP/GIF, макс. 5 МБ; файл в `static/avatars/u{id}{ext}`, возвращает `avatar_url`)
 - PUT /api/users/me/password — сменить пароль (auth, `{current_password, new_password}`)
 
