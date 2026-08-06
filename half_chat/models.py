@@ -8,6 +8,7 @@ class User(SQLModel, table=True):
     username: str = Field(unique=True, index=True)
     password_hash: str
     date_of_birth: Optional[str] = None
+    avatar_url: Optional[str] = None
 
 
 class Group(SQLModel, table=True):

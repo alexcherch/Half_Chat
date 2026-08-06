@@ -81,6 +81,7 @@ alembic/
 - Message.deleted — bool (по умолчанию False), soft-delete
 - Message.group_id — FK на chat_group.id, index
 - User.date_of_birth — опционально, строка
+- User.avatar_url — опционально, путь к аватарке (/static/avatars/u{id}{ext})
 - Group.__tablename__ = "chat_group"
 - Group.is_direct — bool (по умолчанию False), личные чаты
 - Group.pinned_message_id — закреплённое сообщение группы (один пин)
@@ -107,6 +108,12 @@ alembic upgrade head
 ## Эндпоинты (users)
 - GET /api/users?q= — поиск пользователей по username (public)
 - GET /api/users/{username}/status — статус онлайн/офлайн (public), по активным WS-подключениям
-- GET /api/users/me — профиль текущего пользователя (auth)
+- GET /api/users/me — профиль текущего пользователя (auth) — `{username, date_of_birth, avatar_url}`
 - PUT /api/users/me — изменить username/date_of_birth (auth, обновляет Message/GroupMember)
+- PUT /api/users/me/avatar — загрузить аватар (auth, `multipart/form-data`, поле `file`; PNG/JPEG/WebP/GIF, макс. 5 МБ; файл в `static/avatars/u{id}{ext}`, возвращает `avatar_url`)
 - PUT /api/users/me/password — сменить пароль (auth, `{current_password, new_password}`)
+
+## Аватары
+- Файлы сохраняются в `static/avatars/` (runtime, в .gitignore), отдаются через `app.mount("/static", ...)`
+- В Docker `static/` — named volume `avatars` (не пропадают при пересборке)
+- Валидация: размер ≤ 5 МБ (413), content-type + магическая сигнатура изображения (400)

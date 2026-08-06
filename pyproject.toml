@@ -16,8 +16,14 @@ dependencies = [
     "bcrypt (>=4.0.0,<4.1.0)",
     "psycopg2-binary (>=2.9,<3.0)",
     "alembic (>=1.18.5,<2.0.0)",
-    "uvicorn (>=0.52.0,<0.53.0)"
+    "uvicorn (>=0.52.0,<0.53.0)",
+    "python-multipart (>=0.0.20,<0.1.0)"
 ]
+
+[[tool.poetry.source]]
+name = "aliyun"
+url = "https://mirrors.aliyun.com/pypi/simple/"
+priority = "primary"
 
 
 [build-system]

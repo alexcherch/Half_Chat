@@ -1,7 +1,9 @@
+import os
 from datetime import datetime
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlmodel import Session, select
 
 from half_chat.database import engine, init_db
@@ -22,6 +24,10 @@ app.include_router(auth.router)
 app.include_router(groups.router)
 app.include_router(messages.router)
 app.include_router(users.router)
+
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+os.makedirs(os.path.join(STATIC_DIR, "avatars"), exist_ok=True)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 @app.on_event("startup")

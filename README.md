@@ -18,7 +18,7 @@ bash dev.sh docker:up    # docker compose up --build (app + postgres)
 bash dev.sh docker:down  # docker compose down
 ```
 
-Поднимаются два сервиса: `db` (postgres:16) и `app` (build из `Dockerfile`). При старте применяются миграции, затем запускается uvicorn на `:8000`. Конфиг — через env `DATABASE_URL` и `SECRET_KEY` (`db_config.py` в контейнер не попадает). Зависимости ставятся из `requirements.txt` (генерируется из poetry.lock: `poetry export -f requirements.txt --output requirements.txt --only main`).
+Поднимаются два сервиса: `db` (postgres:16) и `app` (build из `Dockerfile`). При старте применяются миграции, затем запускается uvicorn на `:8000`. Конфиг — через env `DATABASE_URL` и `SECRET_KEY` (`db_config.py` в контейнер не попадает). Зависимости ставятся из `requirements.txt` (генерируется из poetry.lock: `poetry export -f requirements.txt --output requirements.txt --only main`). Загруженные аватарки хранятся в named volume `avatars` (`static/` в контейнере), поэтому не пропадают при пересборке.
 
 ## Конфигурация
 
@@ -46,6 +46,7 @@ Credentials БД — в `half_chat/db_config.py` (gitignored, скопируй �
 | `GET` | `/api/users/{username}/status` | Статус онлайн/офлайн | Нет |
 | `GET` | `/api/users/me` | Профиль текущего пользователя | Да |
 | `PUT` | `/api/users/me` | Изменить username/дату рождения | Да |
+| `PUT` | `/api/users/me/avatar` | Загрузить аватар (PNG/JPEG/WebP/GIF, макс. 5 МБ) | Да |
 | `PUT` | `/api/users/me/password` | Сменить пароль | Да |
 
 ### Группы

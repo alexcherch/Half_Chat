@@ -134,6 +134,9 @@ celerybeat.pid
 # Local database config
 half_chat/db_config.py
 
+# User uploads (avatars)
+static/
+
 # SQLite
 chat.db
 
