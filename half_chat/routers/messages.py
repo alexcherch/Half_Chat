@@ -152,6 +152,7 @@ async def send_message(
 def get_messages(
     group_id: int = Query(default=1),
     after_id: int = Query(default=0),
+    before_id: int = Query(default=0),
     limit: int = Query(default=20, le=100),
     current_user: User = Depends(get_current_user),
 ):
@@ -159,6 +160,18 @@ def get_messages(
         group = session.get(Group, group_id)
         if not group:
             raise HTTPException(status_code=404, detail="Группа не найдена")
+
+        if before_id:
+            statement = (
+                select(Message)
+                .where(Message.group_id == group_id)
+                .where(Message.id < before_id)  # type: ignore[operator]
+                .order_by(Message.id.desc())  # type: ignore[union-attr]
+            )
+            results = session.exec(statement).all()
+            older = results[:limit]
+            older.reverse()
+            return older
 
         statement = (
             select(Message)
