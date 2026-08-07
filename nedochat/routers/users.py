@@ -7,7 +7,7 @@ from nedochat.auth import get_current_user, hash_password, verify_password
 from nedochat.avatars import delete_avatar, save_avatar
 from nedochat.database import engine
 from nedochat.models import GroupBan, GroupMember, Message, User, UserBlock
-from nedochat.schemas import PasswordUpdate, UserSearchRead, UserUpdate
+from nedochat.schemas import PasswordUpdate, UserPublicRead, UserSearchRead, UserUpdate
 from nedochat.ws import manager
 
 router = APIRouter()
@@ -110,6 +110,20 @@ def get_me(current_user: User = Depends(get_current_user)):
         "date_of_birth": current_user.date_of_birth,
         "avatar_url": current_user.avatar_url,
     }
+
+
+@router.get("/api/users/{username}", response_model=UserPublicRead)
+def get_user_by_username(username: str):
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.username == username)).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+        return UserPublicRead(
+            username=user.username,
+            display_name=user.display_name,
+            avatar_url=user.avatar_url,
+            date_of_birth=user.date_of_birth,
+        )
 
 
 @router.put("/api/users/me/avatar")

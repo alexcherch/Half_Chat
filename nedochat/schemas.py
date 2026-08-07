@@ -71,6 +71,13 @@ class UserSearchRead(BaseModel):
     display_name: Optional[str] = None
 
 
+class UserPublicRead(BaseModel):
+    username: str
+    display_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    date_of_birth: Optional[str] = None
+
+
 class RoleUpdate(BaseModel):
     role: str
 

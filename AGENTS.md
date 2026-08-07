@@ -116,6 +116,7 @@ alembic upgrade head
 
 ## Эндпоинты (users)
 - GET /api/users?q= — поиск пользователей по username (public) — `[{username, display_name}]`
+- GET /api/users/{username} — точное совпадение по уникальному username (case-sensitive), публичный профиль `{username, display_name, avatar_url, date_of_birth}` или 404
 - GET /api/users/{username}/status — статус онлайн/офлайн (public), по активным WS-подключениям
 - GET /api/users/me — профиль текущего пользователя (auth) — `{username, display_name, date_of_birth, avatar_url}`
 - PUT /api/users/me — изменить username/display_name/date_of_birth (auth, обновляет Message/GroupMember)

@@ -43,6 +43,7 @@ Credentials БД — в `nedochat/db_config.py` (gitignored, скопируй с
 | Метод | Путь | Описание | Auth |
 |---|---|---|---|
 | `GET` | `/api/users?q=` | Поиск пользователей по username → `[{username, display_name}]` | Нет |
+| `GET` | `/api/users/{username}` | Профиль по уникальному имени (точное совпадение, регистр учитывается) → `{username, display_name, avatar_url, date_of_birth}` | Нет |
 | `GET` | `/api/users/{username}/status` | Статус онлайн/офлайн | Нет |
 | `GET` | `/api/users/me` | Профиль текущего пользователя | Да |
 | `PUT` | `/api/users/me` | Изменить username/отображаемое имя/дату рождения | Да |
