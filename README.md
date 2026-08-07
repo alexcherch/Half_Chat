@@ -153,7 +153,7 @@ erDiagram
 ## Тесты
 
 ```bash
-poetry run pytest    # 39 тестов, покрытие ~80% (pytest-cov), отдельная БД nedochat_test
+poetry run pytest    # 57 тестов, покрытие ~84% (pytest-cov), отдельная БД nedochat_test
 ```
 
 - Тесты в `tests/` (auth, users, groups, messages); хелперы в `tests/conftest.py`

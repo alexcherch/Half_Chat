@@ -65,7 +65,9 @@ def _check_can_post(session: Session, group_id: int, username: str) -> None:
             GroupMember.username == username,
         )
     ).first()
-    if membership and membership.muted:
+    if not membership:
+        raise HTTPException(status_code=403, detail="Вы не состоите в этой группе")
+    if membership.muted:
         raise HTTPException(
             status_code=403,
             detail="Вы не можете писать сообщения в этой группе",
@@ -211,6 +213,15 @@ def get_messages(
         group = session.get(Group, group_id)
         if not group:
             raise HTTPException(status_code=404, detail="Группа не найдена")
+
+        membership = session.exec(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.username == current_user.username,
+            )
+        ).first()
+        if not membership:
+            raise HTTPException(status_code=403, detail="Вы не состоите в этой группе")
 
         if before_id:
             statement = (

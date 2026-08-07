@@ -170,3 +170,104 @@ def test_blocked_messages_hidden(client):
     texts = [m["text"] for m in r.json()]
     assert "alice msg" in texts
     assert "bob msg" not in texts
+
+
+def test_non_member_cannot_post_or_read(client):
+    register(client, "alice")
+    register(client, "bob")
+    gid = create_group(client, "alice", "closed")
+    r = client.post(
+        "/api/messages",
+        json={"group_id": gid, "text": "intruder"},
+        headers=auth_headers(client, "bob"),
+    )
+    assert r.status_code == 403
+    assert (
+        client.get(
+            "/api/messages", params={"group_id": gid}, headers=auth_headers(client, "bob")
+        ).status_code
+        == 403
+    )
+
+
+def test_non_member_cannot_forward_into_group(client):
+    register(client, "alice")
+    register(client, "bob")
+    gid = create_group(client, "alice", "closed")
+    other = create_group(client, "bob", "other")
+    m = _send_group(client, "bob", "src", other)
+    r = client.post(
+        f"/api/messages/{m['id']}/forward",
+        json={"group_id": gid},
+        headers=auth_headers(client, "bob"),
+    )
+    assert r.status_code == 403
+
+
+def test_empty_text_rejected(client):
+    register(client, "alice")
+    gid = _gid_for(client, "alice")
+    assert (
+        client.post(
+            "/api/messages",
+            json={"group_id": gid, "text": "   "},
+            headers=auth_headers(client, "alice"),
+        ).status_code
+        == 400
+    )
+
+
+def test_deleted_visible_to_direct_author_only(client):
+    register(client, "alice")
+    register(client, "bob")
+    dm = client.post(
+        "/api/directs", json={"username": "bob"}, headers=auth_headers(client, "alice")
+    ).json()
+    m = _send_group(client, "alice", "secret", dm["id"])
+    client.delete(f"/api/messages/{m['id']}", headers=auth_headers(client, "alice"))
+    author_list = client.get(
+        "/api/messages", params={"group_id": dm["id"]}, headers=auth_headers(client, "alice")
+    ).json()
+    peer_list = client.get(
+        "/api/messages", params={"group_id": dm["id"]}, headers=auth_headers(client, "bob")
+    ).json()
+    assert any(x["id"] == m["id"] for x in author_list)
+    assert not any(x["id"] == m["id"] for x in peer_list)
+
+
+def test_blocked_author_hidden_in_search(client):
+    register(client, "alice")
+    register(client, "bob")
+    gid = create_group(client, "alice", "pub", members=["bob"])
+    _send_group(client, "bob", "throwaway needle", gid)
+    client.post("/api/users/bob/block", headers=auth_headers(client, "alice"))
+    r = client.get(
+        "/api/messages/search", params={"q": "needle"}, headers=auth_headers(client, "alice")
+    )
+    assert all("needle" not in m["text"] for m in r.json())
+
+
+def test_search_forbidden_group(client):
+    register(client, "alice")
+    register(client, "bob")
+    gid = create_group(client, "alice", "closed")
+    _send_group(client, "alice", "needle", gid)
+    r = client.get(
+        "/api/messages/search",
+        params={"q": "needle", "group_id": gid},
+        headers=auth_headers(client, "bob"),
+    )
+    assert r.status_code == 403
+
+
+def test_history_forbidden_for_non_member(client):
+    register(client, "alice")
+    register(client, "bob")
+    gid = create_group(client, "alice", "closed")
+    m = _send_group(client, "alice", "v1", gid)
+    assert (
+        client.get(
+            f"/api/messages/{m['id']}/history", headers=auth_headers(client, "bob")
+        ).status_code
+        == 403
+    )

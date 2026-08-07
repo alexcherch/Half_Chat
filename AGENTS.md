@@ -25,6 +25,7 @@ poetry run pytest tests/test_users.py::test_block_flow   # один тест
 - Отдельная БД `nedochat_test` (создаётся один раз вручную; URL строится из dev-конфига подменой имени базы). Собственно `nedochat/` в coverage, `tests/` — нет
 - `conftest.py` задаёт `DATABASE_URL` на `nedochat_test` до импорта `nedochat.main`, выключает slowapi (`limiter.enabled=False`) и дропает/создаёт таблицы перед каждым тестом
 - `from tests.conftest import ...` — хелперы `register`, `login`, `auth_headers`, `create_group`, `send_message`, `PNG_1PX`
+- Ожидание покрытия: `>= 84%` по модулю `nedochat`
 - Настройка — в `pyproject.toml [tool.pytest.ini_options]` (testpaths, pythonpath=".", addopts coverage)
 
 ## Docker
