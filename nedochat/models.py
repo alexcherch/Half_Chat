@@ -16,6 +16,8 @@ class Group(SQLModel, table=True):
     __tablename__ = "chat_group"
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(index=True)
+    description: Optional[str] = None
+    avatar_url: Optional[str] = None
     created_by: str
     created_at: str
     is_direct: bool = Field(default=False)

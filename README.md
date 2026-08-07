@@ -53,8 +53,11 @@ Credentials БД — в `nedochat/db_config.py` (gitignored, скопируй с
 
 | Метод | Путь | Описание | Auth |
 |---|---|---|---|
-| `POST` | `/api/groups` | Создать группу `{name}` (создатель становится admin) | Да |
+| `POST` | `/api/groups` | Создать группу `{name, description?}` (создатель становится admin) | Да |
 | `GET` | `/api/groups` | Список групп пользователя с `member_count` | Да |
+| `GET` | `/api/groups/{id}` | Детали группы (описание, аватар) | Да |
+| `PUT` | `/api/groups/{id}` | Изменить `{name?, description?}` | Да (админ) |
+| `POST` | `/api/groups/{id}/avatar` | Загрузить аватар группы (PNG/JPEG/WebP/GIF, макс. 5 МБ) | Да (админ) |
 | `POST` | `/api/groups/{id}/members` | Добавить участника `{username}` | Да |
 | `POST` | `/api/groups/{id}/join` | Вступить в группу | Да |
 | `POST` | `/api/groups/{id}/leave` | Выйти из группы | Да |

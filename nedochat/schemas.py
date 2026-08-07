@@ -25,11 +25,19 @@ class ForwardCreate(BaseModel):
 
 class GroupCreate(BaseModel):
     name: str
+    description: Optional[str] = None
+
+
+class GroupUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
 
 
 class GroupRead(BaseModel):
     id: int
     name: str
+    description: Optional[str] = None
+    avatar_url: Optional[str] = None
     created_by: str
     created_at: str
     member_count: int = 0

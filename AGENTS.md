@@ -59,8 +59,11 @@ alembic/
 - POST /api/messages/{id}/pin — закрепить (auth, один пин на группу в chat_group.pinned_message_id)
 - POST /api/messages/{id}/unpin — открепить (auth)
 - WS /api/ws/{group_id}?token= — реальное время: события `new_message`, `update_message`, `delete_message`, `mention`, `presence`, `pin_message`, `unpin_message`
-- POST /api/groups — `{name}` (auth, создатель становится участником)
+- POST /api/groups — `{name, description?}` (auth, создатель становится участником)
 - GET /api/groups — список групп пользователя с member_count (auth)
+- GET /api/groups/{id} — детали группы (auth, только участник)
+- PUT /api/groups/{id} — изменить name/description (auth, только админ, не для личных чатов)
+- POST /api/groups/{id}/avatar — загрузить аватар группы (auth, только админ; PNG/JPEG/WebP/GIF, макс. 5 МБ)
 - POST /api/groups/{id}/members — `{username}` (auth)
 - POST /api/groups/{id}/join — вступить в группу (auth)
 - GET /api/groups/{id}/members — список участников с ролями (auth)
@@ -84,6 +87,8 @@ alembic/
 - User.display_name — опционально, отображаемое имя (отдельно от username)
 - User.avatar_url — опционально, путь к аватарке (/static/avatars/u{id}{ext})
 - Group.__tablename__ = "chat_group"
+- Group.description — опционально
+- Group.avatar_url — опционально, аватар группы (/static/avatars/g{id}{ext})
 - Group.is_direct — bool (по умолчанию False), личные чаты
 - Group.pinned_message_id — закреплённое сообщение группы (один пин)
 - GroupMember.__tablename__ = "group_member"
@@ -116,5 +121,6 @@ alembic upgrade head
 
 ## Аватары
 - Файлы сохраняются в `static/avatars/` (runtime, в .gitignore), отдаются через `app.mount("/static", ...)`
+- Общая логика в `nedochat/avatars.py` (`save_avatar`, `delete_avatar`, `is_valid_image`); юзер — `u{id}{ext}`, группа — `g{id}{ext}`
 - В Docker `static/` — named volume `avatars` (не пропадают при пересборке)
 - Валидация: размер ≤ 5 МБ (413), content-type + магическая сигнатура изображения (400)

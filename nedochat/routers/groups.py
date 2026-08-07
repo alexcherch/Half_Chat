@@ -1,10 +1,11 @@
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlmodel import Session, func, select
 
 from nedochat.auth import get_current_user
+from nedochat.avatars import delete_avatar, save_avatar
 from nedochat.database import engine
 from nedochat.models import Group, GroupBan, GroupMember, User
 from nedochat.schemas import (
@@ -13,6 +14,7 @@ from nedochat.schemas import (
     DirectRead,
     GroupCreate,
     GroupRead,
+    GroupUpdate,
     MemberRead,
     RoleUpdate,
 )
@@ -45,6 +47,7 @@ def create_group(
     with Session(engine) as session:
         group = Group(
             name=group_data.name.strip(),
+            description=group_data.description.strip() if group_data.description else None,
             created_by=current_user.username,
             created_at=datetime.now().isoformat(),
         )
@@ -58,6 +61,8 @@ def create_group(
         return GroupRead(
             id=group.id,  # type: ignore[arg-type]
             name=group.name,
+            description=group.description,
+            avatar_url=group.avatar_url,
             created_by=group.created_by,
             created_at=group.created_at,
             member_count=1,
@@ -158,6 +163,8 @@ def list_groups(current_user: User = Depends(get_current_user)):
                 GroupRead(
                     id=g.id,  # type: ignore[arg-type]
                     name=g.name,
+                    description=g.description,
+                    avatar_url=g.avatar_url,
                     created_by=g.created_by,
                     created_at=g.created_at,
                     member_count=count,
@@ -165,6 +172,105 @@ def list_groups(current_user: User = Depends(get_current_user)):
                 )
             )
         return result
+
+
+@router.get("/api/groups/{group_id}", response_model=GroupRead)
+def get_group(group_id: int, current_user: User = Depends(get_current_user)):
+    with Session(engine) as session:
+        group = session.get(Group, group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+
+        membership = session.exec(
+            select(GroupMember).where(
+                GroupMember.group_id == group_id,
+                GroupMember.username == current_user.username,
+            )
+        ).first()
+        if not membership:
+            raise HTTPException(status_code=403, detail="Вы не состоите в группе")
+
+        count = session.exec(
+            select(func.count(GroupMember.id)).where(GroupMember.group_id == group_id)  # type: ignore[arg-type]
+        ).one()
+        return GroupRead(
+            id=group.id,  # type: ignore[arg-type]
+            name=group.name,
+            description=group.description,
+            avatar_url=group.avatar_url,
+            created_by=group.created_by,
+            created_at=group.created_at,
+            member_count=count,
+            is_direct=group.is_direct,
+            pinned_message_id=group.pinned_message_id,
+        )
+
+
+@router.put("/api/groups/{group_id}", response_model=GroupRead)
+def update_group(
+    group_id: int,
+    group_data: GroupUpdate,
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        group = session.get(Group, group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+        if group.is_direct:
+            raise HTTPException(status_code=400, detail="Личный чат нельзя редактировать")
+        get_admin_or_403(session, group_id, current_user.username)
+
+        if group_data.name is not None:
+            if not group_data.name.strip():
+                raise HTTPException(status_code=400, detail="Название группы не может быть пустым")
+            group.name = group_data.name.strip()
+
+        if group_data.description is not None:
+            group.description = group_data.description.strip() or None
+
+        session.add(group)
+        session.commit()
+        session.refresh(group)
+
+        count = session.exec(
+            select(func.count(GroupMember.id)).where(GroupMember.group_id == group_id)  # type: ignore[arg-type]
+        ).one()
+        return GroupRead(
+            id=group.id,  # type: ignore[arg-type]
+            name=group.name,
+            description=group.description,
+            avatar_url=group.avatar_url,
+            created_by=group.created_by,
+            created_at=group.created_at,
+            member_count=count,
+            pinned_message_id=group.pinned_message_id,
+        )
+
+
+@router.post("/api/groups/{group_id}/avatar", status_code=200)
+async def upload_group_avatar(
+    group_id: int,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        group = session.get(Group, group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+        if group.is_direct:
+            raise HTTPException(status_code=400, detail="Личный чат нельзя редактировать")
+        get_admin_or_403(session, group_id, current_user.username)
+
+        new_url = await save_avatar(file, f"g{group.id}")
+        if group.avatar_url and group.avatar_url != new_url:
+            delete_avatar(group.avatar_url)
+
+        group.avatar_url = new_url
+        session.add(group)
+        session.commit()
+        session.refresh(group)
+
+    return {"status": "success", "group_id": group.id, "avatar_url": group.avatar_url}
 
 
 @router.post("/api/groups/{group_id}/members", status_code=200)

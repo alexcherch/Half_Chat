@@ -1,38 +1,16 @@
-import os
 from typing import List
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlmodel import Session, select
 
 from nedochat.auth import get_current_user, hash_password, verify_password
+from nedochat.avatars import delete_avatar, save_avatar
 from nedochat.database import engine
 from nedochat.models import GroupBan, GroupMember, Message, User
 from nedochat.schemas import PasswordUpdate, UserSearchRead, UserUpdate
 from nedochat.ws import manager
 
 router = APIRouter()
-
-STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
-AVATARS_DIR = os.path.join(STATIC_DIR, "avatars")
-MAX_AVATAR_SIZE = 5 * 1024 * 1024
-ALLOWED_AVATAR_TYPES = {
-    "image/png": ".png",
-    "image/jpeg": ".jpg",
-    "image/webp": ".webp",
-    "image/gif": ".gif",
-}
-
-
-def _is_valid_image(content: bytes, content_type: str) -> bool:
-    if content_type == "image/png":
-        return content[:8] == b"\x89PNG\r\n\x1a\n"
-    if content_type == "image/jpeg":
-        return content[:3] == b"\xff\xd8\xff"
-    if content_type == "image/webp":
-        return content[:4] == b"RIFF" and content[8:12] == b"WEBP"
-    if content_type == "image/gif":
-        return content[:6] in (b"GIF87a", b"GIF89a")
-    return False
 
 
 @router.get("/api/users", response_model=List[UserSearchRead])
@@ -73,36 +51,16 @@ async def upload_avatar(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
 ):
-    ext = ALLOWED_AVATAR_TYPES.get(file.content_type or "")
-    if not ext:
-        raise HTTPException(
-            status_code=400,
-            detail="Поддерживаются только PNG, JPEG, WebP, GIF",
-        )
-
-    content = await file.read(MAX_AVATAR_SIZE + 1)
-    if len(content) > MAX_AVATAR_SIZE:
-        raise HTTPException(status_code=413, detail="Файл слишком большой (максимум 5 МБ)")
-
-    if not _is_valid_image(content, file.content_type or ""):
-        raise HTTPException(status_code=400, detail="Файл не является изображением")
-
     with Session(engine) as session:
         user = session.exec(select(User).where(User.username == current_user.username)).first()
         if not user:
             raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-        if user.avatar_url:
-            old_path = os.path.join(AVATARS_DIR, os.path.basename(user.avatar_url))
-            if os.path.isfile(old_path):
-                os.remove(old_path)
+        new_url = await save_avatar(file, f"u{user.id}")
+        if user.avatar_url and user.avatar_url != new_url:
+            delete_avatar(user.avatar_url)
 
-        os.makedirs(AVATARS_DIR, exist_ok=True)
-        filename = f"u{user.id}{ext}"
-        with open(os.path.join(AVATARS_DIR, filename), "wb") as f:
-            f.write(content)
-
-        user.avatar_url = f"/static/avatars/{filename}"
+        user.avatar_url = new_url
         session.add(user)
         session.commit()
         session.refresh(user)
