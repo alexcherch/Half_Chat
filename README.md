@@ -48,6 +48,9 @@ Credentials БД — в `nedochat/db_config.py` (gitignored, скопируй с
 | `PUT` | `/api/users/me` | Изменить username/отображаемое имя/дату рождения | Да |
 | `PUT` | `/api/users/me/avatar` | Загрузить аватар (PNG/JPEG/WebP/GIF, макс. 5 МБ) | Да |
 | `PUT` | `/api/users/me/password` | Сменить пароль | Да |
+| `POST` | `/api/users/{username}/block` | Заблокировать пользователя (не может писать в личку, его сообщения скрываются) | Да |
+| `POST` | `/api/users/{username}/unblock` | Разблокировать | Да |
+| `GET` | `/api/users/me/blocked` | Список заблокированных | Да |
 
 ### Группы
 

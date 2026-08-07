@@ -6,11 +6,77 @@ from sqlmodel import Session, select
 from nedochat.auth import get_current_user, hash_password, verify_password
 from nedochat.avatars import delete_avatar, save_avatar
 from nedochat.database import engine
-from nedochat.models import GroupBan, GroupMember, Message, User
+from nedochat.models import GroupBan, GroupMember, Message, User, UserBlock
 from nedochat.schemas import PasswordUpdate, UserSearchRead, UserUpdate
 from nedochat.ws import manager
 
 router = APIRouter()
+
+
+@router.post("/api/users/{username}/block", status_code=200)
+def block_user(username: str, current_user: User = Depends(get_current_user)):
+    target_name = username.strip()
+    if not target_name:
+        raise HTTPException(status_code=400, detail="Имя пользователя не может быть пустым")
+    if target_name == current_user.username:
+        raise HTTPException(status_code=400, detail="Нельзя заблокировать самого себя")
+
+    with Session(engine) as session:
+        target = session.exec(select(User).where(User.username == target_name)).first()
+        if not target:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        existing = session.exec(
+            select(UserBlock).where(
+                UserBlock.blocker_id == current_user.id,
+                UserBlock.blocked_id == target.id,
+            )
+        ).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Пользователь уже заблокирован")
+
+        session.add(UserBlock(blocker_id=current_user.id, blocked_id=target.id))
+        session.commit()
+
+    return {"status": "success", "username": target_name, "blocked": True}
+
+
+@router.post("/api/users/{username}/unblock", status_code=200)
+def unblock_user(username: str, current_user: User = Depends(get_current_user)):
+    target_name = username.strip()
+    if not target_name:
+        raise HTTPException(status_code=400, detail="Имя пользователя не может быть пустым")
+
+    with Session(engine) as session:
+        target = session.exec(select(User).where(User.username == target_name)).first()
+        if not target:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        existing = session.exec(
+            select(UserBlock).where(
+                UserBlock.blocker_id == current_user.id,
+                UserBlock.blocked_id == target.id,
+            )
+        ).first()
+        if not existing:
+            raise HTTPException(status_code=404, detail="Пользователь не заблокирован")
+
+        session.delete(existing)
+        session.commit()
+
+    return {"status": "success", "username": target_name, "blocked": False}
+
+
+@router.get("/api/users/me/blocked", response_model=List[str])
+def list_blocked(current_user: User = Depends(get_current_user)):
+    with Session(engine) as session:
+        rows = session.exec(select(UserBlock).where(UserBlock.blocker_id == current_user.id)).all()
+        ids = [r.blocked_id for r in rows]
+        if not ids:
+            return []
+        return list(
+            session.exec(select(User.username).where(User.id.in_(ids))).all()  # type: ignore[union-attr]
+        )
 
 
 @router.get("/api/users", response_model=List[UserSearchRead])

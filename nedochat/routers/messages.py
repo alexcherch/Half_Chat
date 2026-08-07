@@ -9,7 +9,7 @@ from sqlmodel import Session, select
 from nedochat.auth import get_current_user
 from nedochat.config import ALGORITHM, SECRET_KEY
 from nedochat.database import engine
-from nedochat.models import Group, GroupMember, Message, User
+from nedochat.models import Group, GroupMember, Message, User, UserBlock
 from nedochat.schemas import ForwardCreate, MessageUpdate
 from nedochat.ws import manager
 
@@ -67,6 +67,51 @@ def _check_can_post(session: Session, group_id: int, username: str) -> None:
         )
 
 
+def _blocked_usernames(session: Session, username: str) -> set:
+    me = session.exec(select(User).where(User.username == username)).first()
+    if not me:
+        return set()
+    ids = [
+        row.blocked_id
+        for row in session.exec(select(UserBlock).where(UserBlock.blocker_id == me.id)).all()
+    ]
+    if not ids:
+        return set()
+    return set(
+        session.exec(select(User.username).where(User.id.in_(ids))).all()  # type: ignore[union-attr]
+    )
+
+
+def _check_direct_blocked(session: Session, group: Group, username: str) -> None:
+    if not group.is_direct:
+        return
+    peer = session.exec(
+        select(GroupMember.username).where(
+            GroupMember.group_id == group.id,
+            GroupMember.username != username,
+        )
+    ).first()
+    if not peer:
+        return
+    peer_user = session.exec(select(User).where(User.username == peer)).first()
+    if not peer_user:
+        return
+    me = session.exec(select(User).where(User.username == username)).first()
+    if not me:
+        return
+    blocked = session.exec(
+        select(UserBlock).where(
+            UserBlock.blocker_id == peer_user.id,
+            UserBlock.blocked_id == me.id,
+        )
+    ).first()
+    if blocked:
+        raise HTTPException(
+            status_code=403,
+            detail="Вы не можете отправлять сообщения этому пользователю",
+        )
+
+
 @router.websocket("/api/ws/{group_id}")
 async def websocket_endpoint(websocket: WebSocket, group_id: int):
     await manager.connect(group_id, websocket)
@@ -104,6 +149,7 @@ async def send_message(
             raise HTTPException(status_code=404, detail="Группа не найдена")
 
         _check_can_post(session, group.id, current_user.username)  # type: ignore[arg-type]
+        _check_direct_blocked(session, group, current_user.username)
 
         if message_data.reply_to_id:
             reply_msg = session.get(Message, message_data.reply_to_id)
@@ -169,9 +215,11 @@ def get_messages(
                 .order_by(Message.id.desc())  # type: ignore[union-attr]
             )
             results = session.exec(statement).all()
-            older = results[:limit]
+            blocked = _blocked_usernames(session, current_user.username)
+            older = [m for m in results if m.username not in blocked][:limit]
             return older[::-1]
 
+        blocked = _blocked_usernames(session, current_user.username)
         statement = (
             select(Message)
             .where(Message.group_id == group_id)
@@ -180,7 +228,11 @@ def get_messages(
         )
         results = session.exec(statement).all()
 
-        visible = [msg for msg in results if _message_visible(session, group, msg, current_user)]
+        visible = [
+            msg
+            for msg in results
+            if msg.username not in blocked and _message_visible(session, group, msg, current_user)
+        ]
         return visible[-limit:] if visible else []
 
 
@@ -213,8 +265,11 @@ def search_messages(
 
         results = session.exec(statement.limit(limit)).all()
 
+        blocked = _blocked_usernames(session, current_user.username)
         visible = []
         for msg in results:
+            if msg.username in blocked:
+                continue
             group = session.get(Group, msg.group_id)
             if group and _message_visible(session, group, msg, current_user):
                 visible.append(msg)
@@ -237,6 +292,7 @@ async def forward_message(
             raise HTTPException(status_code=404, detail="Группа не найдена")
 
         _check_can_post(session, target_group.id, current_user.username)  # type: ignore[arg-type]
+        _check_direct_blocked(session, target_group, current_user.username)
 
         new_msg = Message(
             username=current_user.username,

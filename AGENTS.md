@@ -118,9 +118,16 @@ alembic upgrade head
 - PUT /api/users/me — изменить username/display_name/date_of_birth (auth, обновляет Message/GroupMember)
 - PUT /api/users/me/avatar — загрузить аватар (auth, `multipart/form-data`, поле `file`; PNG/JPEG/WebP/GIF, макс. 5 МБ; файл в `static/avatars/u{id}{ext}`, возвращает `avatar_url`)
 - PUT /api/users/me/password — сменить пароль (auth, `{current_password, new_password}`)
+- POST /api/users/{username}/block — заблокировать пользователя (auth; idempotent-ish, 400 если уже в списке; запрещает ему писать вам в личку)
+- POST /api/users/{username}/unblock — разблокировать (auth)
+- GET /api/users/me/blocked — список заблокированных username (auth)
+
+## Блокировка (игнор)
+- Таблица `user_block` (blocker_id, blocked_id, unique pair); хранит ID, а не username — не ломается при переименовании
+- Заблокированный не может писать/пересылать в личный чат блокирующего (`_check_direct_blocked`, 403)
+- Сообщения авторов из чёрного списка скрываются в `GET /api/messages` и `/api/messages/search` (`_blocked_usernames`)
 
 ## Аватары
-- Файлы сохраняются в `static/avatars/` (runtime, в .gitignore), отдаются через `app.mount("/static", ...)`
 - Общая логика в `nedochat/avatars.py` (`save_avatar`, `delete_avatar`, `is_valid_image`); юзер — `u{id}{ext}`, группа — `g{id}{ext}`
 - В Docker `static/` — named volume `avatars` (не пропадают при пересборке)
 - Валидация: размер ≤ 5 МБ (413), content-type + магическая сигнатура изображения (400)

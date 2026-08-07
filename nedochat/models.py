@@ -1,5 +1,6 @@
 from typing import Optional
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
@@ -38,6 +39,14 @@ class GroupBan(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     group_id: int = Field(foreign_key="chat_group.id", index=True)
     username: str
+
+
+class UserBlock(SQLModel, table=True):
+    __tablename__ = "user_block"
+    __table_args__ = (UniqueConstraint("blocker_id", "blocked_id", name="uq_user_block_pair"),)
+    id: Optional[int] = Field(default=None, primary_key=True)
+    blocker_id: int = Field(foreign_key="user.id", index=True)
+    blocked_id: int = Field(foreign_key="user.id", index=True)
 
 
 class Message(SQLModel, table=True):
