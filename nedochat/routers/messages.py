@@ -9,8 +9,13 @@ from sqlmodel import Session, select
 from nedochat.auth import get_current_user
 from nedochat.config import ALGORITHM, SECRET_KEY
 from nedochat.database import engine
-from nedochat.models import Group, GroupMember, Message, User, UserBlock
-from nedochat.schemas import ForwardCreate, MessageUpdate
+from nedochat.models import Group, GroupMember, Message, MessageVersion, User, UserBlock
+from nedochat.schemas import (
+    ForwardCreate,
+    MessageHistoryRead,
+    MessageUpdate,
+    MessageVersionRead,
+)
 from nedochat.ws import manager
 
 router = APIRouter()
@@ -432,7 +437,17 @@ async def update_message(
                 detail="Нельзя редактировать чужое сообщение",
             )
 
-        message.text = update_data.text.strip()
+        new_text = update_data.text.strip()
+        if new_text != message.text:
+            session.add(
+                MessageVersion(
+                    message_id=message.id,
+                    text=message.text,
+                    edited_at=datetime.now().isoformat(),
+                )
+            )
+            message.text = new_text
+            message.edited_at = datetime.now().isoformat()
 
         session.add(message)
         session.commit()
@@ -443,3 +458,40 @@ async def update_message(
         {"type": "update_message", "message": message.model_dump()},
     )
     return message
+
+
+@router.get("/api/messages/{message_id}/history", response_model=MessageHistoryRead)
+def get_message_history(
+    message_id: int,
+    current_user: User = Depends(get_current_user),
+):
+    with Session(engine) as session:
+        message = session.exec(select(Message).where(Message.id == message_id)).first()
+        if not message:
+            raise HTTPException(status_code=404, detail=f"Сообщение с ID {message_id} не найдено")
+
+        group = session.get(Group, message.group_id)
+        if not group:
+            raise HTTPException(status_code=404, detail="Группа не найдена")
+
+        membership = session.exec(
+            select(GroupMember).where(
+                GroupMember.group_id == group.id,
+                GroupMember.username == current_user.username,
+            )
+        ).first()
+        if not membership and message.username != current_user.username:
+            raise HTTPException(status_code=403, detail="Вы не состоите в группе")
+
+        versions = session.exec(
+            select(MessageVersion)
+            .where(MessageVersion.message_id == message.id)
+            .order_by(MessageVersion.id.asc())  # type: ignore[union-attr]
+        ).all()
+
+        return MessageHistoryRead(
+            message_id=message.id,  # type: ignore[arg-type]
+            current_text=message.text,
+            edited_at=message.edited_at,
+            versions=[MessageVersionRead(text=v.text, edited_at=v.edited_at) for v in versions],
+        )

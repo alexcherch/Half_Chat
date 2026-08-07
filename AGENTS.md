@@ -31,7 +31,7 @@ nedochat/
   config.py              # SECRET_KEY, ALGORITHM, DATABASE_URL
   db_config.py           # локальные credentials (gitignored)
   database.py            # engine, init_db()
-  models.py              # SQLModel: User, Group, GroupMember, Message
+  models.py              # SQLModel: User, Group, GroupMember, Message, MessageVersion, UserBlock
   schemas.py             # Pydantic: UserCreate, Token, MessageUpdate, Group*, AddMember
   auth.py                # hash/verify password, JWT, get_current_user
   ws.py                  # ConnectionManager (WebSockets по группам)
@@ -53,7 +53,8 @@ alembic/
 - POST /api/messages — `{text, group_id, reply_to_id?}` (auth)
 - GET /api/messages?group_id=&after_id=&limit= (auth) — soft-delete: в группах удале. видны только админу, в личных чатах — только автору
 - GET /api/messages/search?q=&group_id?=&limit= (auth) — поиск по тексту сообщений (ILIKE) в группах пользователя, с теми же правилами видимости удалённых
-- PUT /api/messages/{id} (auth, только свои)
+- PUT /api/messages/{id} (auth, только свои) — при изменении текста ставит `edited_at` и сохраняет предыдущий текст в `MessageVersion`
+- GET /api/messages/{id}/history (auth, автор или участник группы) — `{message_id, current_text, edited_at, versions:[{text, edited_at}]}` (версии = прошлые тексты по порядку)
 - DELETE /api/messages/{id} (auth, только свои) — soft-delete (столбец deleted, строку не стирает)
 - POST /api/messages/{id}/forward — `{group_id}` (auth), копия в др. группу с forwarded_from_id/forwarded_group_id
 - POST /api/messages/{id}/pin — закрепить (auth, один пин на группу в chat_group.pinned_message_id)
@@ -82,6 +83,8 @@ alembic/
 - Message.reply_to_id — FK на Message.id, опционально
 - Message.forwarded_from_id — FK на Message.id (ON DELETE SET NULL), forwarded_group_id — исходная группа
 - Message.deleted — bool (по умолчанию False), soft-delete
+- Message.edited_at — Optional[str], ставится при редактировании (признак «изменено»)
+- MessageVersion — история: message_id FK, text (прошлый текст), edited_at (когда заменён)
 - Message.group_id — FK на chat_group.id, index
 - User.date_of_birth — опционально, строка
 - User.display_name — опционально, отображаемое имя (отдельно от username)

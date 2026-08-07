@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -84,3 +84,15 @@ class UserUpdate(BaseModel):
 class PasswordUpdate(BaseModel):
     current_password: str
     new_password: str
+
+
+class MessageVersionRead(BaseModel):
+    text: str
+    edited_at: str
+
+
+class MessageHistoryRead(BaseModel):
+    message_id: int
+    current_text: str
+    edited_at: Optional[str] = None
+    versions: List[MessageVersionRead] = []

@@ -82,7 +82,8 @@ Credentials БД — в `nedochat/db_config.py` (gitignored, скопируй с
 | `POST` | `/api/messages` | Отправить `{text, group_id, reply_to_id?}`; `@username` в тексте создаёт уведомление | Да |
 | `GET` | `/api/messages?group_id=&after_id=&limit=` | История сообщений (удал. видят: админ в группах, автор в личках) | Да |
 | `GET` | `/api/messages/search?q=&group_id?=&limit=` | Поиск по тексту сообщений (в своих группах) | Да |
-| `PUT` | `/api/messages/{id}` | Редактировать текст | Да (свои) |
+| `PUT` | `/api/messages/{id}` | Редактировать текст (ставит `edited_at` — «изменено») | Да (свои) |
+| `GET` | `/api/messages/{id}/history` | История версий сообщения `{current_text, edited_at, versions:[{text, edited_at}]}` | Да (автор/участник) |
 | `DELETE` | `/api/messages/{id}` | Удалить сообщение (soft-delete) | Да (свои) |
 | `POST` | `/api/messages/{id}/forward` | Переслать `{group_id}` в другую группу | Да |
 | `POST` | `/api/messages/{id}/pin` | Закрепить сообщение в группе | Да |

@@ -59,3 +59,12 @@ class Message(SQLModel, table=True):
     forwarded_from_id: Optional[int] = Field(default=None, foreign_key="message.id")
     forwarded_group_id: Optional[int] = Field(default=None)
     deleted: bool = Field(default=False)
+    edited_at: Optional[str] = None
+
+
+class MessageVersion(SQLModel, table=True):
+    __tablename__ = "message_version"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    message_id: int = Field(foreign_key="message.id", index=True)
+    text: str
+    edited_at: str
