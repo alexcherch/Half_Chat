@@ -131,6 +131,11 @@ alembic upgrade head
 - Заблокированный не может писать/пересылать в личный чат блокирующего (`_check_direct_blocked`, 403)
 - Сообщения авторов из чёрного списка скрываются в `GET /api/messages` и `/api/messages/search` (`_blocked_usernames`)
 
+## Rate limiting (slowapi)
+- `limiter` в `nedochat/rate_limit.py`, key — IP клиента (`get_remote_address`); wire в `main.py` (app.state.limiter + handler → 429)
+- Лимиты на auth: `/api/register` — 5/мин, `/api/login` — 10/мин (по IP); из памяти — сбрасываются при рестарте
+- Эндпоинт с `@limiter.limit(...)` обязан принимать параметр `request: Request` (в auth.py)
+
 ## Аватары
 - Общая логика в `nedochat/avatars.py` (`save_avatar`, `delete_avatar`, `is_valid_image`); юзер — `u{id}{ext}`, группа — `g{id}{ext}`
 - В Docker `static/` — named volume `avatars` (не пропадают при пересборке)

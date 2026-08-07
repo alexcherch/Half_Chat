@@ -35,8 +35,8 @@ Credentials БД — в `nedochat/db_config.py` (gitignored, скопируй с
 
 | Метод | Путь | Описание | Auth |
 |---|---|---|---|
-| `POST` | `/api/register` | Регистрация `{username, password, date_of_birth?, display_name?}` (новый пользователь авто-добавляется в `general`) | Нет |
-| `POST` | `/api/login` | Вход, возвращает `access_token` | Нет |
+| `POST` | `/api/register` | Регистрация `{username, password, date_of_birth?, display_name?}` (новый пользователь авто-добавляется в `general`); лимит 5/мин по IP | Нет |
+| `POST` | `/api/login` | Вход, возвращает `access_token`; лимит 10/мин по IP | Нет |
 
 ### Пользователи
 

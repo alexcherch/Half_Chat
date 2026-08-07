@@ -4,13 +4,19 @@ from datetime import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from sqlmodel import Session, select
 
 from nedochat.database import engine, init_db
 from nedochat.models import Group
+from nedochat.rate_limit import limiter
 from nedochat.routers import auth, groups, messages, users
 
 app = FastAPI(title="Nedochat")
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
 app.add_middleware(
     CORSMiddleware,

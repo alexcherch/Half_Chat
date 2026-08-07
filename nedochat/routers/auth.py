@@ -1,16 +1,18 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from sqlmodel import Session, select
 
 from nedochat.auth import create_access_token, hash_password, verify_password
 from nedochat.database import engine
 from nedochat.models import Group, GroupMember, User
+from nedochat.rate_limit import limiter
 from nedochat.schemas import Token, UserCreate
 
 router = APIRouter()
 
 
 @router.post("/api/register", status_code=201)
-def register(user_data: UserCreate):
+@limiter.limit("5/minute")
+def register(request: Request, user_data: UserCreate):
     if not user_data.username.strip() or not user_data.password.strip():
         raise HTTPException(status_code=400, detail="Имя и пароль не могут быть пустыми")
 
@@ -46,7 +48,8 @@ def register(user_data: UserCreate):
 
 
 @router.post("/api/login", response_model=Token)
-def login(user_data: UserCreate):
+@limiter.limit("10/minute")
+def login(request: Request, user_data: UserCreate):
     with Session(engine) as session:
         user = session.exec(select(User).where(User.username == user_data.username.strip())).first()
         if not user or not verify_password(user_data.password, user.password_hash):
