@@ -150,6 +150,16 @@ erDiagram
     chat_group o|--o| Message : "закреплённое"
 ```
 
+## Тесты
+
+```bash
+poetry run pytest    # 39 тестов, покрытие ~80% (pytest-cov), отдельная БД nedochat_test
+```
+
+- Тесты в `tests/` (auth, users, groups, messages); хелперы в `tests/conftest.py`
+- Используется отдельная тестовая БД `nedochat_test` (создаётся один раз), таблицы пересоздаются перед каждым тестом; rate limit (slowapi) выключен
+- Coverage: `--cov=nedochat --cov-report=term-missing` (по умолчанию из `pyproject.toml`)
+
 ## Миграции
 
 ```bash

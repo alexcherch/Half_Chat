@@ -7,6 +7,8 @@
 
 ## Запуск
 ```bash
+## Запуск
+```bash
 bash dev.sh install      # poetry install
 bash dev.sh start        # uvicorn main:app --reload
 bash dev.sh db:init      # создать БД и таблицы
@@ -14,6 +16,16 @@ bash dev.sh db:migrate   # применить миграции
 bash dev.sh docker:up    # docker compose up --build (app + postgres)
 bash dev.sh docker:down  # docker compose down
 ```
+
+## Тесты
+```bash
+poetry run pytest                       # pytest --cov=nedochat --cov-report=term-missing (обязательно раз в ветке)
+poetry run pytest tests/test_users.py::test_block_flow   # один тест
+```
+- Отдельная БД `nedochat_test` (создаётся один раз вручную; URL строится из dev-конфига подменой имени базы). Собственно `nedochat/` в coverage, `tests/` — нет
+- `conftest.py` задаёт `DATABASE_URL` на `nedochat_test` до импорта `nedochat.main`, выключает slowapi (`limiter.enabled=False`) и дропает/создаёт таблицы перед каждым тестом
+- `from tests.conftest import ...` — хелперы `register`, `login`, `auth_headers`, `create_group`, `send_message`, `PNG_1PX`
+- Настройка — в `pyproject.toml [tool.pytest.ini_options]` (testpaths, pythonpath=".", addopts coverage)
 
 ## Docker
 - `Dockerfile` — python:3.14-slim, pip install -r requirements.txt (без dev)
@@ -133,7 +145,7 @@ alembic upgrade head
 
 ## Rate limiting (slowapi)
 - `limiter` в `nedochat/rate_limit.py`, key — IP клиента (`get_remote_address`); wire в `main.py` (app.state.limiter + handler → 429)
-- Лимиты на auth: `/api/register` — 5/мин, `/api/login` — 10/мин (по IP); из памяти — сбрасываются при рестарте
+- Лимиты на auth: `/api/register` — 5/мин, `/api/login` — 10/мин (по IP); из памяти — сбрасываются при рестарте; в тестах выключен (`tests/conftest.py`)
 - Эндпоинт с `@limiter.limit(...)` обязан принимать параметр `request: Request` (в auth.py)
 
 ## Аватары

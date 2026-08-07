@@ -38,6 +38,9 @@ dev = [
     "flake8 (>=7.3.0,<8.0.0)",
     "mypy (>=2.3.0,<3.0.0)",
     "websockets (>=17.0,<18.0)",
+    "pytest (>=9.1.1,<10.0.0)",
+    "pytest-cov (>=7.1.0,<8.0.0)",
+    "httpx (>=0.28.1,<0.29.0)",
 ]
 
 [tool.black]
@@ -50,4 +53,9 @@ profile = "black"
 line_length = 100
 multi_line_output = 3
 include_trailing_comma = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "--cov=nedochat --cov-report=term-missing"
 
