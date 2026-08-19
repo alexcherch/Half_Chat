@@ -119,6 +119,15 @@ def _check_direct_blocked(session: Session, group: Group, username: str) -> None
         )
 
 
+@router.get("/api/ws/{group_id}")
+def websocket_http_hint(group_id: int):
+    raise HTTPException(
+        status_code=426,
+        detail="Это WebSocket-эндпоинт (ws://). Подключитесь через WebSocket-клиент и "
+        "убедитесь, что прокси передаёт заголовки Upgrade/Connection.",
+    )
+
+
 @router.websocket("/api/ws/{group_id}")
 async def websocket_endpoint(websocket: WebSocket, group_id: int):
     await manager.connect(group_id, websocket)

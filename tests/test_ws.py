@@ -1,6 +1,9 @@
 # mypy: disable-error-code=arg-type
 import asyncio
 
+from fastapi.testclient import TestClient
+
+from nedochat.main import app
 from nedochat.ws import ConnectionManager
 
 
@@ -107,3 +110,10 @@ def test_broadcast_removes_dead_socket():
         assert a not in mgr.active_connections.get(1, [])
 
     _run(run())
+
+
+def test_ws_plain_get_returns_426():
+    client = TestClient(app)
+    r = client.get("/api/ws/1")
+    assert r.status_code == 426
+    assert "WebSocket" in r.json()["detail"]

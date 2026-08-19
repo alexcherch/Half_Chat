@@ -30,7 +30,7 @@ poetry run pytest tests/test_users.py::test_block_flow   # один тест
 
 ## Docker
 - `Dockerfile` — python:3.14-slim, pip install -r requirements.txt (без dev)
-- `requirements.txt` — генерируется из poetry.lock: `poetry export -f requirements.txt --output requirements.txt --only main` (требует плагин `poetry-plugin-export`)
+- `requirements.txt` — генерируется из poetry.lock: `poetry export -f requirements.txt --output requirements.txt --only main` (требует плагин `poetry-plugin-export`); **`websockets` — в основных зависимостях** (без него uvicorn не обрабатывает WS-апгрейды → 404/426 на /api/ws)
 - `docker-compose.yml` — сервисы `db` (postgres:16) и `app`
 - Конфиг из env: `DATABASE_URL`, `SECRET_KEY` (db_config.py в контейнер не попадает — в .dockerignore)
 - При старте: `alembic upgrade head` → `uvicorn main:app`
@@ -73,6 +73,7 @@ alembic/
 - POST /api/messages/{id}/pin — закрепить (auth, один пин на группу в chat_group.pinned_message_id)
 - POST /api/messages/{id}/unpin — открепить (auth)
 - WS /api/ws/{group_id}?token= — реальное время: события `new_message`, `update_message`, `delete_message`, `mention`, `presence`, `pin_message`, `unpin_message`
+- GET /api/ws/{group_id} — диагностика: обычный GET (без WebSocket-Upgrade) возвращает 426 с пояснением вместо глухого 404
 - POST /api/groups — `{name, description?}` (auth, создатель становится участником)
 - GET /api/groups — список групп пользователя с member_count (auth)
 - GET /api/groups/{id} — детали группы (auth, только участник)
